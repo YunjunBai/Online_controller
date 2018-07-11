@@ -20,6 +20,7 @@
 
 #include "UniformGrid.hh"
 #include "TransitionFunction.hh"
+
 #include "WinningDomain.hh"
 
 

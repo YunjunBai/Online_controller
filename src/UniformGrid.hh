@@ -356,6 +356,7 @@ public:
     return NN;
   }
   //@}
+ 
 
 protected:
   void calc_nn() {

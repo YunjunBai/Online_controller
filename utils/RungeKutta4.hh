@@ -27,10 +27,10 @@ namespace scots {
  * @param nint - number of intermediate steps (default = 10)
  * @return the solution of IVP at time tau \f$ \xi(\tau) \f$ stored in x
  **/
-template<class RHS, class state_type, class input_type>
-void runge_kutta_fixed4(RHS rhs, state_type &x, input_type &u, const int dim, const double tau, const int nint=10) noexcept {
-  state_type k[4];
-  state_type tmp;
+template<class RHS, class ds_type, class input_type>
+void runge_kutta_fixed4(RHS rhs, ds_type &x, input_type &u, const int dim, const double tau, const int nint=10) noexcept {
+  ds_type k[4];
+  ds_type tmp;
 
   double h=tau/(double)nint;
 

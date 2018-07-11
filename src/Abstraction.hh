@@ -16,6 +16,7 @@
 
 #include "UniformGrid.hh"
 #include "TransitionFunction.hh"
+#include "Disturbance.hh"
 
 /** @namespace scots **/ 
 namespace scots {
@@ -43,7 +44,7 @@ namespace params {
  * - http://arxiv.org/abs/1503.03715 for theoretical background 
  *
  **/
-template<class state_type, class input_type>
+template<class state_type, class input_type, class ds_type>
 class Abstraction {
 private:
   /* grid information of state alphabet */
@@ -131,14 +132,11 @@ public:
    * In the second loop the data members of the TransitionFunction are computed.
    * 
    **/
-  template<class F1, class F2, class F4=decltype(params::avoid_abs)>
+  template<class F1,  class F4=decltype(params::avoid_abs)>
   void compute_gb(TransitionFunction& transition_function, 
-                  F1& system_post, 
-                  F2& radius_post,
-                  state_type disturbance_bound, 
+                  F1& rs_post, 
                   F4& avoid=params::avoid_abs) {
-    /*w:disturbance bound*/
-    state_type w=disturbance_bound;
+   
     /* number of cells */
     abs_type N=m_state_alphabet.size(); 
     /* number of inputs */
@@ -162,6 +160,7 @@ public:
     /* state and input variables */
     state_type x;
     input_type u;
+    ds_type y;
     /* for out of bounds check */
     state_type lower_left;
     state_type upper_right;
@@ -196,15 +195,24 @@ public:
         out_of_domain[i*M+j]=false;
         /* get center x of cell */
         m_state_alphabet.itox(i,x);
+
         /* cell radius (including measurement errors) */
-        for(int k=0; k<dim; k++)
+        for(int k=0; k<dim; k++){
           r[k]=eta[k]/2.0+m_z[k];
+          y[k]=x[k];
+          y[k+dim]=r[k];
+        }
         /* current input */
         m_input_alphabet.itox(j,u);
         /* integrate system and radius growth bound */
         /* the result is stored in x and r */
-        radius_post(r,x,u,w);
-        system_post(x,u);
+
+        rs_post(y,u);
+        for (int k = 0; k<dim; ++k)
+        {
+          x[k]=y[k];
+          r[k]=y[k+dim];
+        }
         /* determine the cells which intersect with the attainable set: 
          * discrete hyper interval of cell indices 
          * [lb[0]; ub[0]] x .... x [lb[dim-1]; ub[dim-1]]
@@ -265,6 +273,7 @@ public:
         if(counter==0)
           std::cout << "1st loop: ";
       }
+      // std::cout << "Computed transition for state " << i << "\n" << std::endl;
       progress(i,N,counter);
     }
     /* compute pre_ptr */

@@ -173,6 +173,7 @@ public:
                                       WinningDomain& wd){
     std::queue<abs_type> queue_diff;
     std::vector<abs_type> winning_domain = wd.get_m_winning_domain();
+    std::vector<bool> in_queuediff(m_no_states, false);
     abs_type loosing = std::numeric_limits<abs_type>::max();
 
     std::vector<abs_type> c;
@@ -181,19 +182,30 @@ public:
       for (abs_type j = 0; j < m_no_inputs; j++)
       {
         std::vector<abs_type>  post_1=this->get_post(i,j);
-        std::vector<abs_type>  post_2=tf_new.get_post(i,j);
+       
+        std::vector<abs_type>  post_2=tf_new.get_post(i,j);    
+  
         if (post_1.size()!=post_2.size())
         {
-          for (std::vector<abs_type>::iterator it=post_2.begin();it!=post_2.end();++it)
-            queue_diff.push(*it); 
+          for (std::vector<abs_type>::iterator it=post_2.begin();it!=post_2.end();++it){
+            if(in_queuediff[*it]!= true){
+              queue_diff.push(*it); 
+              in_queuediff[*it]=true;
+            }
+          }
+              
         }else{
-          std::sort(post_1.begin(), post_1.end());
-          std::sort(post_2.begin(), post_2.end());
+          //std::sort(post_1.begin(), post_1.end());
+          //std::sort(post_2.begin(), post_2.end());
         
           if (!std::equal(post_1.begin(),post_1.end(),post_2.begin()))
           {
-              for (std::vector<abs_type>::iterator it=post_2.begin();it!=post_2.end();++it)
-                queue_diff.push(*it);
+              for (std::vector<abs_type>::iterator it=post_2.begin();it!=post_2.end();++it){
+                if(in_queuediff[*it]!= true){
+                   queue_diff.push(*it); 
+                  in_queuediff[*it]=true;
+                }
+              }
           }
         }
         std::set_difference(post_1.begin(), post_1.end(), 
@@ -203,6 +215,7 @@ public:
         c.clear();
      }
   }
+
   return queue_diff;
 }
 

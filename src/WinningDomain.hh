@@ -123,7 +123,9 @@ public:
                 m_winning_domain(std::move(winning_domain)),
                 value(std::move(value)),
                 m_inputs(std::move(inputs)),
-                m_loosing(loosing) {}
+                m_loosing(loosing) {
+
+                }
  /** @brief construct WinningDomain with array of winning states and valid inputs **/
   WinningDomain(abs_type no_states,
                 abs_type no_inputs,
@@ -199,7 +201,7 @@ public:
   std::vector<abs_type> get_m_winning_domain() const{
     return m_winning_domain;
   }
-
+ 
   std::vector<double> get_value() const{
     return value;
   }
@@ -212,6 +214,9 @@ public:
     value[it]=j;
   }
 
+  abs_type get_msize(){
+    return m_winning_domain.size();
+  }
 };
 
 } /* close namespace */

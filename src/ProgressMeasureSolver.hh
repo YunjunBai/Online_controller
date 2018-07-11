@@ -11,6 +11,7 @@
 
 #include "UniformGrid.hh"
 #include "TransitionFunction.hh"
+
 #include "WinningDomain.hh"
 
 namespace scots{
@@ -95,7 +96,7 @@ WinningDomain static_safety_game(const TransitionFunction& trans_function, F& sa
 
 
 WinningDomain online_safety_game(const TransitionFunction& trans_function, 
-                                 std::queue<abs_type> del_or_ins, 
+                                 std::queue<abs_type> online_queue, 
                                  WinningDomain wd) {
   /* size of state alphabet */
   abs_type N=trans_function.m_no_states;
@@ -114,7 +115,7 @@ WinningDomain online_safety_game(const TransitionFunction& trans_function,
   std::vector<double> value_temp(N,0);
   std::unique_ptr<double[]>  edge_val(new double[N*M]);
  
-  std::queue<abs_type> fifo=del_or_ins;
+  std::queue<abs_type> fifo=online_queue;
   
 
   while(!fifo.empty()) {
@@ -214,13 +215,17 @@ WinningDomain static_reachability_game(const TransitionFunction& trans_function,
         /* (i,j,q) is a transition */
         /* update the number of processed posts */
         K[i*M+j]--;
+
         /* update the max value of processed posts */
         edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]);
+      
         /* check if for node i and input j all posts are processed */
         if(!K[i*M+j] && value[i]>edge_val[i*M+j]) {
+
           fifo.push(i);
           value[i]=edge_val[i*M+j]; 
           win_domain[i]=j;
+
         }
       }  /* end loop over all pres of state i under input j */
     }  /* end loop over all input j */
@@ -233,7 +238,7 @@ WinningDomain static_reachability_game(const TransitionFunction& trans_function,
 
 template<class F1=decltype(params::avoid)>
 WinningDomain online_reachability_game(const TransitionFunction& trans_function,
-                                      std::queue<abs_type> del_or_ins, 
+                                      std::queue<abs_type> online_queue, 
                                       F1& avoid,
                                       WinningDomain wd
                                       ) {
@@ -262,7 +267,7 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
   std::unique_ptr<double[]>  edge_val(new double[N*M]); //todo  i am not sure
 
   /* init fifo */
-  std::queue<abs_type> fifo=del_or_ins;
+  std::queue<abs_type> fifo=online_queue;
 
   for(abs_type i=0; i<N; i++) {  
     for(abs_type j=0; j<M; j++) {
@@ -290,6 +295,7 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
         edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]);
         /* check if for node i and input j all posts are processed */
         if(!K[i*M+j] && value[i]>edge_val[i*M+j]) {
+
           fifo.push(i);
           value[i]=edge_val[i*M+j]; 
           win_domain[i]=j;

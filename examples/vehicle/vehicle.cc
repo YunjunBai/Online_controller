@@ -39,8 +39,9 @@ const double tau = 0.3;
  * elements used in uniform grid and ode solvers
  */
 using state_type = std::array<double,state_dim>;
+using disturbance_type = std::array<double, state_dim>;
 using input_type = std::array<double,input_dim>;
-
+using ds_type = std::array<double, 2*state_dim>;
 
 /* abbrev of the type for abstract states and inputs */
 using abs_type = scots::abs_type;
@@ -59,7 +60,7 @@ auto  vehicle_post = [](state_type &x, const input_type &u) {
 };
 
 /* we integrate the growth bound by 0.3 sec (the result is stored in r)  */
-auto radius_post = [](state_type &r, const state_type &, const input_type &u, const state_type &w) {
+auto radius_post = [](state_type &r, const state_type &, const input_type &u, const disturbance_type &w) {
   double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
   r[0] = r[0]+c*r[2]*tau + w[0]*tau;
   r[1] = r[1]+c*r[2]*tau + w[1]*tau;
@@ -89,6 +90,14 @@ int main() {
   input_type i_eta={{.3,.3}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
+
+  disturbance_type w_1={0.05, 0.05, 0.05};
+  disturbance_type w_2={0.03, 0.1, 0.08};
+  disturbance_type w2_lb={0,0,0};
+  disturbance_type w2_ub={5,1.8,3};
+
+  scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
+
 
   /* set up constraint functions with obtacles */
   double H[15][4] = {
@@ -122,19 +131,43 @@ int main() {
     }
     return false;
   };
- state_type w_1={0.1, 0.2, 0.3};
- state_type w_2={0.2, 0.2, 0.4};
-
+ 
   /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
+  
+
+  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+    /* find the distrubance for the given state */
+    state_type x;
+    state_type r;
+    for (int i=0; i<state_dim; i++){
+      x[i] = y[i];
+      r[i] = y[i+state_dim];
+    }
+    disturbance_type w = dis.get_disturbance(x,r);
+
+    double alpha=std::atan(std::tan(u[1])/2.0);
+    double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
+    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha);
+    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha);
+    yy[2] = u[0]*std::tan(u[1]);
+    yy[3] = c*y[5] + w[0];
+    yy[4] = c*y[5] + w[1];
+    yy[5] =0;
+  };
+
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
+};
+
 
   std::cout << "Computing the transition function: " << std::endl;
   /* transition function of symbolic model */
   scots::TransitionFunction tf_o1d,tf_new;
-  scots::Abstraction<state_type,input_type> abs(ss,is);
+  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
   tt.tic();
-  abs.compute_gb(tf_o1d,vehicle_post, radius_post,w_1, avoid);
+  abs.compute_gb(tf_o1d,rs_post, avoid);
   //abs.compute_gb(tf,vehicle_post, radius_post);
   tt.toc();
 
@@ -158,25 +191,25 @@ int main() {
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::solve_reachability_game(tf_o1d,target);
+  scots::WinningDomain win=scots::static_reachability_game(tf_o1d,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
   std::cout << "\nWrite controller to controller.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller"))
-    std::cout << "Done. \n";
+  //if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller"))
+    //std::cout << "Done. \n";
 
   tt.tic();
-
-  abs.compute_gb(tf_new,vehicle_post, radius_post,w_2, avoid);
+  dis.update_disturbance(w_2, w2_lb, w2_ub);
+  abs.compute_gb(tf_new,rs_post, avoid);
   //abs.compute_gb(tf,vehicle_post, radius_post);
-   std::cout << "\n finish computer new transitions \n";
+   std::cout << "Number of transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();
 
   tt.tic();
   std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);
   tt.toc();
-
+  std::cout<<"onlinequeuesize:"<<online_queue.size()<<std::endl;
 
   std::cout << "\nOnline Synthesis: " << std::endl;
   tt.tic();
