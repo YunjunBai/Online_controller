@@ -86,6 +86,8 @@ public:
   std::unique_ptr<abs_type[]> m_no_post;    
   /*difference between this and another transition class, deletion or insertion*/
   std::queue<abs_type> m_diff; 
+ 
+  std::unique_ptr<abs_type[]> corner_IDs;
 public:
   /* @cond  EXCLUDE from doxygen */
   /* default constructor */
@@ -95,7 +97,8 @@ public:
                          m_pre(nullptr),
                          m_pre_ptr(nullptr),
                          m_no_pre(nullptr),
-                         m_no_post(nullptr) { }  
+                         m_no_post(nullptr),
+                         corner_IDs(nullptr) { }  
   /* move constructor */
   TransitionFunction(TransitionFunction&& other) {
     *this = std::move(other);  
@@ -110,7 +113,7 @@ public:
     m_pre_ptr=std::move(other.m_pre_ptr);
     m_no_pre=std::move(other.m_no_pre);
     m_no_post=std::move(other.m_no_post);
-
+    corner_IDs=std::move(other.corner_IDs);
     other.m_no_states=0;
     other.m_no_inputs=0;
     other.m_no_transitions=0;
@@ -229,7 +232,8 @@ public:
     m_pre_ptr.reset(new abs_ptr_type[no_state*no_inputs]);
     m_no_pre.reset(new abs_type[no_state*no_inputs] ());
     m_no_post.reset(new abs_type[no_state*no_inputs] ());
-
+    /* lower-left & upper-right corners of hyper rectangle of cells that cover attainable set */
+    corner_IDs.reset(new abs_type[no_state*no_inputs*2]());
   }
 
   /** @brief allocate memory for pre array **/
@@ -248,8 +252,10 @@ public:
     m_pre_ptr.reset(nullptr);
     m_no_pre.reset(nullptr);
     m_no_post.reset(nullptr);
+    corner_IDs.reset(nullptr);
   }
   
+
 
 };
 

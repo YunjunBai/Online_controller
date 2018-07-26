@@ -94,7 +94,7 @@ int main() {
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
 
-  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rs_post = [&dis](ds_type &y, input_type &u, bool check_i, disturbance_type lb, disturbance_type ub) -> void {
   auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
@@ -104,7 +104,7 @@ int main() {
       r[i] = y[i+state_dim];
     }
     disturbance_type w = dis.get_disturbance(x,r);
-    
+    dis.check_xinR(x,check_i,lb,ub);//todo
     double L[2][2];
         L[0][0] = 0;
         L[0][1] = 0;
