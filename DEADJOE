@@ -1,0 +1,44 @@
+
+*** These modified files were found in JOE when it aborted on Mon Jul 30 18:59:19 2018
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+/home/baiyunjun/Documents/online_algorithm/.git/COMMIT_EDITMSG
+
+*** File '/home/baiyunjun/Documents/online_algorithm/.git/COMMIT_EDITMSG'
+
+
+
+q
+exit
+q!
+
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Committer: Yunjun Bai <baiyunjun@wks-41-810.mpi-sws.org>
+#
+# On branch master
+# Your branch is up-to-date with 'origin/master'.
+#
+# Changes to be committed:
+#	modified:   examples/test/Makefile
+#	modified:   examples/test/controller.scs
+#	modified:   examples/test/obstacles.scs
+#	new file:   examples/test/result.txt
+#	modified:   examples/test/target.scs
+#	deleted:    examples/test/test
+#	modified:   examples/test/test.cc
+#	new file:   examples/unicycle/test_oneroom
+#	modified:   examples/vehicle/vehicle
+#	modified:   src/Abstraction.hh
+#	modified:   src/InputOutput.hh
+#	modified:   utils/TicToc.hh
+#
+
+*** File '* Startup Log *'
+Processing '/etc/joe/editorrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/editorrc
