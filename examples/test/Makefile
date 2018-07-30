@@ -24,4 +24,4 @@ test:
 #	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
-	rm test 
+	rm test

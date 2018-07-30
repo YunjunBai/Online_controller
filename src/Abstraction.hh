@@ -526,7 +526,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
                     F3& rs_repost,
                     F4& avoid=params::avoid_abs){
 
-     TicToc tt;
+     
     /* number of cells */
     abs_type N=m_state_alphabet.size(); 
     /* number of inputs */
@@ -632,7 +632,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
     abs_type coun=0;
 
-    tt.tic();
+   
    
    /*start big loop untill the recompute_queue become empty*/
     while(!recompute_queue.empty())
@@ -784,8 +784,8 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
        // }
       //progress_re(N,M,counter,counter_states);
     }
-    std::cout<<"recomputing transitions untill queue empty"<<std::endl;
-    tt.toc();
+    std::cout<<"recomputing transitions untill queue empty";
+  
       
       std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<std::endl;
       /*copy from old transtions*/
@@ -929,7 +929,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     //     std::queue<abs_type> dif = get_difference(i);//todo
     //     diff_queue.push_back(dif); //tddo
     // }
-
+   
   }//function closed
 
  

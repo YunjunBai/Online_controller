@@ -468,6 +468,9 @@ bool read_from_file(const Cudd& manager, SymbolicSet& set, BDD& bdd, const std::
     set.clean(manager,bdd);
     return true;
 }
+
+
+
 #endif
 
 
