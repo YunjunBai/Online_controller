@@ -187,7 +187,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::static_reachability_game(tf_o1d,target);
+  scots::WinningDomain win=scots::static_reachability_game(tf_new,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
