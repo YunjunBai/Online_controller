@@ -1,15 +1,4 @@
-/*
- * vehicle.cc
- *
- *  created: Oct 2016
- *   author: Matthias Rungger
- */
 
-/*
- * information about this example is given in
- * http://arxiv.org/abs/1503.03715
- * doi: 10.1109/TAC.2016.2593947
- */
 
 #include <iostream>
 #include <array>
@@ -66,7 +55,7 @@ using abs_type = scots::abs_type;
 //   r[1] = r[1]+c*r[2]*tau + w[1]*tau;
 // };
 
-int main() {
+int main_parameters(const int p1, const int p2) {
   /* to measure time */
   TicToc tt;
 
@@ -93,8 +82,8 @@ int main() {
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.03, 0.1, 0.08}};
-  disturbance_type w2_lb={{3,3,0.5}};
-  disturbance_type w2_ub={{5,5,1.5}};
+  disturbance_type w2_lb={{3-2*p1*s_eta[0],3+2*p1*s_eta[0],0.5}};
+  disturbance_type w2_ub={{5-2*p1*s_eta[0],5+2*p1*s_eta[0],1.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -120,15 +109,15 @@ int main() {
 
   /* avoid function returns 1 if x is in avoid set  */
   auto avoid = [&H,ss,s_eta](const abs_type& idx) {
-    state_type x;
-    ss.itox(idx,x);
-    double c1= s_eta[0]/2.0+1e-10;
-    double c2= s_eta[1]/2.0+1e-10;
-    for(size_t i=0; i<15; i++) {
-      if ((H[i][0]-c1) <= x[0] && x[0] <= (H[i][1]+c1) && 
-          (H[i][2]-c2) <= x[1] && x[1] <= (H[i][3]+c2))
-        return true;
-    }
+    // state_type x;
+    // ss.itox(idx,x);
+    // double c1= s_eta[0]/2.0+1e-10;
+    // double c2= s_eta[1]/2.0+1e-10;
+    // for(size_t i=0; i<15; i++) {
+    //   if ((H[i][0]-c1) <= x[0] && x[0] <= (H[i][1]+c1) && 
+    //       (H[i][2]-c2) <= x[1] && x[1] <= (H[i][3]+c2))
+    //     return true;
+    // }
     return false;
   };
  
@@ -136,9 +125,9 @@ int main() {
   write_to_file(ss,avoid,"obstacles");
   
 
-  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rs_post = [&dis, p2](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis, p2](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -151,9 +140,9 @@ int main() {
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
-    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha);
-    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha);
-    yy[2] = u[0]*std::tan(u[1]);
+    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha)*p2;
+    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha)*p2;
+    yy[2] = u[0]*std::tan(u[1])*p2;
     yy[3] = c*y[5] + w[0];
     yy[4] = c*y[5] + w[1];
     yy[5] = 0;
@@ -165,10 +154,10 @@ int main() {
    
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub,p2](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub,p2](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -183,9 +172,9 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
-    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha);
-    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha);
-    yy[2] = u[0]*std::tan(u[1]);
+    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha)*p2;
+    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha)*p2;
+    yy[2] = u[0]*std::tan(u[1])*p2;
     yy[3] = c*y[5] + w[0];
     yy[4] = c*y[5] + w[1];
     yy[5] = 0;
@@ -213,7 +202,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post, avoid);
   //abs.compute_gb(tf,vehicle_post, radius_post);
-  tt.toc();
+  double t1=tt.toc();
 
   //if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
@@ -223,9 +212,10 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
- 
-   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
-  tt.toc();
+  if(!getrusage(RUSAGE_SELF, &usage))
+    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+  std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
+  double t2=tt.toc();
 
   /* define target set */
   auto target = [&ss,&s_eta](const abs_type& idx) {
@@ -259,8 +249,14 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  if(!getrusage(RUSAGE_SELF, &usage))
    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
-  tt.toc();
+  double t3=tt.toc();
  
+ 	std::ofstream write;
+  	std::ifstream read;
+  	write.open("result.txt", std::ios::app);          
+  	write << "p1:"<<p1<<" p2:"<<p2<<" t1:"<<t1<<" t2:"<<t2<<" t3:"<<t3<<std::endl;
+  	write.close();
+  	read.close();
 
   // tt.tic();
   // std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);
@@ -283,5 +279,16 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  // if(write_to_file(scots::StaticController(ss,is,std::move(win_static)),"controller_w2"))
   //  std::cout << "Done. \n";
   
+  return 1;
+}
+
+int  main()
+{
+ 
+  for (int k = 0; k < 5; ++k)
+  {
+    for(int r = 1; r<6; r++)
+      main_parameters(k,r);
+  }
   return 1;
 }

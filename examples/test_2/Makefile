@@ -11,17 +11,17 @@ CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
 SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
-.PHONY: test
+.PHONY: test_2
 
-TARGET = test
+TARGET = test_2
 
 all: $(TARGET)
 
-test: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) test.cc -o test
+test_2: 
+	$(CC) $(CXXFLAGS) $(SCOTSINC) test_2.cc -o test_2
 
 #simulate: 
 #	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
-	rm test
+	rm test_2

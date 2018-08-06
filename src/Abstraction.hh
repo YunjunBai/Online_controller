@@ -45,7 +45,7 @@ namespace params {
  *
  **/
 template<class state_type, class input_type, class ds_type>
-class Abstraction {
+class Abstraction:public TransitionFunction {
 private:
   /* grid information of state alphabet */
   const UniformGrid m_state_alphabet;
@@ -518,15 +518,14 @@ public:
 
 
 /*recompute transition locally*/
-template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
-  void recompute_gb(TransitionFunction &new_transition,
-                    F1& old_transition,
+template<class F2, class F3, class F4=decltype(params::avoid_abs)>
+  void recompute_gb(TransitionFunction& new_transition,
+                    const TransitionFunction& old_transition,
                     F2& d_lb,
                     F2& d_ub,
                     F3& rs_repost,
                     F4& avoid=params::avoid_abs){
 
-     TicToc tt;
     /* number of cells */
     abs_type N=m_state_alphabet.size(); 
     /* number of inputs */
@@ -567,8 +566,8 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     /* is post of (i,j) out of domain ? */
     std::unique_ptr<bool[]> out_of_domain(new bool[N*M]());
     /* make if a states recompute or not.*/
-    std::vector<bool> recomputed_mark(N*M,false);
-    std::vector<bool> input_todo(N*M,false);
+    std::unique_ptr<bool[]> recomputed_mark(new bool[N*M]());
+    std::unique_ptr<bool[]> input_todo(new bool[N*M]());
     /*contain the states which need to recompute*/
     std::queue<abs_type> recompute_queue; 
     std::vector<bool> out_of_region(N, true); 
@@ -576,6 +575,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::vector<int> tmp;
     abs_type neighbours;
     std::vector<std::vector<int>>  cc_neighbours;
+
      
     int num[]={-1,0,1};
   /*init a queue which contains the states around (d_lb, d_ub), recompute transtions for queue, 
@@ -632,7 +632,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
     abs_type coun=0;
 
-    tt.tic();
+   
    
    /*start big loop untill the recompute_queue become empty*/
     while(!recompute_queue.empty())
@@ -784,8 +784,8 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
        // }
       //progress_re(N,M,counter,counter_states);
     }
-    std::cout<<"recomputing transitions untill queue empty"<<std::endl;
-    tt.toc();
+    std::cout<<"recomputing transitions untill queue empty";
+  
       
       std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<std::endl;
       /*copy from old transtions*/
@@ -795,10 +795,10 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
         {
           if(!recomputed_mark[i*M+j]){
             // new_transition.m_no_pre[i*M+j]=old_transition.m_no_pre[i*M+j];
-            new_transition.m_no_post[i*M+j]=std::move(old_transition.m_no_post[i*M+j]);
+            new_transition.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
             T+=new_transition.m_no_post[i*M+j];
-            new_transition.corner_IDs[i*(2*M)+2*j]=std::move(old_transition.corner_IDs[i*(2*M)+2*j]);
-            new_transition.corner_IDs[i*(2*M)+2*j+1]=std::move(old_transition.corner_IDs[i*(2*M)+2*j+1]);
+            new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
+            new_transition.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
           }
         }
       }
@@ -866,7 +866,8 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
       
       /* allocate memory for pre list */
       new_transition.init_transitions(T);
-
+      if(sum!=T)
+        std::cout<<"error"<<sum<<std::endl;
       /*loop: fill pre array */
       counter=0;
       for(abs_type i=0; i<N; i++) {
@@ -893,7 +894,6 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
             /* total no of post of (i,j) */
             npost*=no[k];
             cc[k]=0;
-
           }
 
           for(abs_type k=0; k<npost; k++) {
@@ -908,7 +908,9 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
               }
             }
             /* (i,j,p) is a transition */
-            new_transition.m_pre[--new_transition.m_pre_ptr[p*M+j]]=i;
+            size_t size_preadd = sizeof(m_pre)/sizeof(abs_type);
+            if(new_transition.m_pre_ptr[p*M+j]>=0 && new_transition.m_pre_ptr[p*M+j]<size_preadd)
+              new_transition.m_pre[--new_transition.m_pre_ptr[p*M+j]]=i;
           }
         }
         /* print progress */
@@ -929,7 +931,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
     //     std::queue<abs_type> dif = get_difference(i);//todo
     //     diff_queue.push_back(dif); //tddo
     // }
-
+  
   }//function closed
 
  
