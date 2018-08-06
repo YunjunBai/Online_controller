@@ -123,9 +123,9 @@ public:
     return *this;
   }
   /* deactivate copy constructor */
-  //TransitionFunction(const TransitionFunction&) = delete;     
+  TransitionFunction(const TransitionFunction&) = delete;     
   /* deactivate copy asignement operator */
-  //TransitionFunction& operator=(const TransitionFunction&) = delete;
+  TransitionFunction& operator=(const TransitionFunction&) = delete;
   /* @endcond */
 
   /** @brief number of elements of the transition relation **/

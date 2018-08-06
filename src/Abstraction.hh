@@ -210,7 +210,7 @@ public:
         out_of_domain[i*M+j]=false;
         /* get center x of cell */
         m_state_alphabet.itox(i,x);
-
+       
         /* cell radius (including measurement errors) */
         for(int k=0; k<dim; k++){
           r[k]=eta[k]/2.0+m_z[k];
@@ -372,7 +372,7 @@ public:
   std::vector<state_type> get_post(F1& system_post,
                                    F2& radius_post,
                                    const state_type& x,
-                                   const input_type& u) const {
+                                 const input_type& u) const {
     /* initialize return value */
     std::vector<state_type> post {};
     /* state space dimension */
@@ -584,7 +584,28 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
   */
     /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
     abs_type nNRegion=1;
-   
+    
+   for (int i = 0; i < dim; ++i)
+    {
+      tmp.push_back(num[0]);
+    }
+    cc_neighbours.push_back(tmp);
+
+    for (int i = dim-1; i>=0; i--)
+    {
+      int ncc=cc_neighbours.size();
+      for (int k = 1; k < 3; ++k)
+      {
+        for (int j = 0; j < ncc; ++j)
+        {
+          tmp=cc_neighbours[j];
+          tmp[i]=num[k];
+          cc_neighbours.push_back(tmp);
+        }
+      }
+    }
+    int ncc = cc_neighbours.size();
+
     for(int k=0; k<dim; k++) {
       /* check for out of bounds */
       double left = d_lb[k]-eta[k]-m_z[k];
@@ -633,7 +654,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     abs_type coun=0;
 
    
-   
+   abs_type conn=0;
    /*start big loop untill the recompute_queue become empty*/
     while(!recompute_queue.empty())
     {
@@ -655,7 +676,8 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           input_todo[q*M+j]=false;
           /* get center x of cell */
           m_state_alphabet.itox(q,x);
-
+          //if(x[0]<=5.92 || x[1]<=3.92 || x[0]>= 9.28 || x[1]>= 7.28 )
+          //    std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<std::endl;
           /* cell radius (including measurement errors) */
          for(int k=0; k<dim; k++){
             r[k]=eta[k]/2.0+m_z[k];
@@ -736,40 +758,18 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
 
           if(out_of_region[q] && intersection_with_region){
             //q_neighour(q, dim, recompute_queue,recomputed_mark,NN, N);
-             tmp.clear();
-             cc_neighbours.clear();
-
-            for (int i = 0; i < dim; ++i)
-            {
-              tmp.push_back(num[0]);
-            }
-            cc_neighbours.push_back(tmp);
-
-            for (int i = dim-1; i>=0; i--)
-            {
-              int ncc=cc_neighbours.size();
-              for (int k = 1; k < 3; ++k)
-              {
-                for (int j = 0; j < ncc; ++j)
-                {
-                  tmp=cc_neighbours[j];
-                  tmp[i]=num[k];
-                  cc_neighbours.push_back(tmp);
-                }
-              }
-            }
-            int ncc = cc_neighbours.size();
+            conn++;
             for (int i = 0; i < ncc; ++i)
             {
-              neighbours=0;
+              neighbours=q;
               for (int k = 0; k < dim; ++k)
               {
-                neighbours = q + cc_neighbours[i][k]*NN[k];
-                if( 0 <= neighbours && neighbours < N && !recomputed_mark[neighbours*M+j]){
-                  recompute_queue.push(neighbours);
-                  recomputed_mark[neighbours*M+j]=true;
-                  input_todo[neighbours*M+j]=true;
-                }
+                neighbours += cc_neighbours[i][k]*NN[k];
+              }
+              if( 0 <= neighbours && neighbours < N && !recomputed_mark[neighbours*M+j]){
+                recompute_queue.push(neighbours);
+                recomputed_mark[neighbours*M+j]=true;
+                input_todo[neighbours*M+j]=true;
               }
             }
           }
@@ -787,7 +787,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::cout<<"recomputing transitions untill queue empty";
   
       
-      std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<std::endl;
+      std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<conn<<std::endl;
       /*copy from old transtions*/
       for (abs_type i = 0; i < N; ++i)
       { 
@@ -800,6 +800,10 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
             new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
             new_transition.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
           }
+          // if(new_transition.corner_IDs[i*(2*M)+2*j]!=standard_transition.corner_IDs[i*(2*M)+2*j] ||
+          //   new_transition.corner_IDs[i*(2*M)+2*j+1]!=standard_transition.corner_IDs[i*(2*M)+2*j+1])
+          //   std::cout<<"here:"<<i<<" "<<j<<" "<<recomputed_mark[i*M+j]<<std::endl;
+           
         }
       }
 
@@ -866,8 +870,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       
       /* allocate memory for pre list */
       new_transition.init_transitions(T);
-      if(sum!=T)
-        std::cout<<"error"<<sum<<std::endl;
+      
       /*loop: fill pre array */
       counter=0;
       for(abs_type i=0; i<N; i++) {
