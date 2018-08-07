@@ -49,7 +49,7 @@ public:
     for (abs_type i=0; i< N; ++i)
       x_disturbance[i] = disturbance_;  
     init_disturbance=disturbance_;
-    pre_CornerIDs={0,0};
+    pre_CornerIDs={2*N,N};
     pre_max_w=init_disturbance;
     disturbance_marker=false;
     ss_dim = states_alphabet.get_dim();
@@ -72,6 +72,8 @@ public:
   void update_disturbance(F1& new_disturbance, 
               F2& d_lb, 
               F2& d_ub){
+
+    disturbance_marker=true;
     /*get all indices in that region, put ids into a queue*/
     std::queue<abs_type> id_queue;
     std::vector<abs_type> lb(ss_dim);  /* lower-left corner */
@@ -130,7 +132,7 @@ public:
     //     std::cout<<"error"<<std::endl;
     //   }
     // }
-    disturbance_marker=true;
+    
   }
 
   /*given a x, return the related w*/
@@ -138,12 +140,15 @@ public:
     disturbance_type get_disturbance(F1& x, F2& r){
         
         /*first check if disturbance update or not, if no, return initial disturbance*/
-        if(disturbance_marker==false){
+        if(!disturbance_marker){
           return init_disturbance;
         }
         
         std::vector<abs_type> corner_IDs(2,0);
-  
+        for(int k=0; k<ss_dim; k++){
+          no[k]=0;
+          base[k]=0;
+        }
         for(int k=0; k<ss_dim; k++) {
             /* check for out of bounds */
             double left = x[k]-r[k]-m_eta[k]/1e10;
@@ -174,57 +179,59 @@ public:
         else{
           pre_CornerIDs[0]=corner_IDs[0];
           pre_CornerIDs[1]=corner_IDs[1];
+        
+          /* compute indices */
+          int i = ss_dim - 1;
+          cc[i] = base[i];
+          /*initialize max_w with the disturbance of first grid piont in this region*/
+          disturbance_type max_w;
+          max_w=x_disturbance[corner_IDs[0]];
+  
+          while(i < ss_dim) {
+              if (idx[i] < no[i]) {
+                  if (i > 0) { //not yet computed the index for all the dimensions
+                      cc[i-1] = cc[i] + base[i-1];
+                      i -= 1;
+                  } else { //we have all the dimensions except 0, we can look the disturbance up
+                      abs_type q = cc[0];
+                      for (abs_type j = 0; j < no[0]; j++) {
+                          for(int l=0; l<ss_dim; l++){
+                              max_w[l] = std::max(x_disturbance[q][l], max_w[l]);
+                          }
+                          q += m_NN[0];
+                      }
+                      idx[0] = no[0]; // make it backtrack to
+                  }
+              } else {
+                  //we reached the bound, going back to the previous dimension
+                  idx[i] = 0;
+                  i += 1;
+                  if (i < ss_dim) {
+                      idx[i] += 1;
+                      cc[i] += m_NN[i];
+                  }
+              }
+          }
+          pre_max_w = max_w;
+
+          return max_w;
         }
-        /* compute indices */
-        int i = ss_dim - 1;
-        cc[i] = base[i];
-        /*initialize max_w with the disturbance of first grid piont in this region*/
-        disturbance_type max_w;
-
-        max_w=x_disturbance[corner_IDs[0]];
-
-        while(i < ss_dim) {
-            if (idx[i] < no[i]) {
-                if (i > 0) { //not yet computed the index for all the dimensions
-                    cc[i-1] = cc[i] + base[i-1];
-                    i -= 1;
-                } else { //we have all the dimensions except 0, we can look the disturbance up
-                    abs_type q = cc[0];
-                    for (abs_type j = 0; j < no[0]; j++) {
-                        for(int l=0; l<ss_dim; l++){
-                            max_w[l] = std::max(x_disturbance[q][l], max_w[l]);
-                        }
-                        q += m_NN[0];
-                    }
-                    idx[0] = no[0]; // make it backtrack to
-                }
-            } else {
-                //we reached the bound, going back to the previous dimension
-                idx[i] = 0;
-                i += 1;
-                if (i < ss_dim) {
-                    idx[i] += 1;
-                    cc[i] += m_NN[i];
-                }
-            }
-        }
-        pre_max_w = max_w;
-
-        return max_w;
   }
   
 
 void intersection(state_type x,state_type r, state_type d_lb,state_type d_ub){
-
+  bool tmp=true;
   for(int i=0; i<ss_dim; i++){
-    if (((d_lb[i]-m_eta[i]/2.0 < (x[i]-r[i]) && (x[i]-r[i])<d_ub[i]+m_eta[i]/2.0))
-      || ((d_lb[i]-m_eta[i]/2.0 < (x[i]+r[i]) && (x[i]+r[i])<d_ub[i]+m_eta[i]/2.0)))
+    if ((x[i]-r[i])>d_ub[i]+m_eta[i]/2.0
+      || d_lb[i]-m_eta[i]/2.0 > (x[i]+r[i]))
     {
-      intersection_check = true;
-    //  std::cout<<"become true"<<std::endl;
+      tmp=false;
+      break;
     }
    
   }
+  if(tmp)
+    intersection_check = true;  
 }
 
 bool get_intersection_check(){

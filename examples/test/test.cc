@@ -26,7 +26,7 @@ const int state_dim=3;
 const int input_dim=2;
 
 /* sampling time */
-const double tau = 0.9;
+const double tau = 0.3;
 
 /*
  * data types for the state space elements and input space
@@ -163,14 +163,14 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
-  double t2=tt.toc();
+  double t3=tt.toc();
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
-  double t3=tt.toc();
+  double t2=tt.toc();
   /* define target set */
   auto target = [&ss,&s_eta](const abs_type& idx) {
     state_type x;

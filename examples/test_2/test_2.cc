@@ -82,12 +82,11 @@ int main_parameters(const int p1, const int p2) {
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.03, 0.1, 0.08}};
-  disturbance_type w2_lb={{3-2*p1*s_eta[0],3+2*p1*s_eta[0],0.5}};
-  disturbance_type w2_ub={{5-2*p1*s_eta[0],5+2*p1*s_eta[0],1.5}};
+  disturbance_type w2_lb={{3-2*p1*s_eta[0],3-2*p1*s_eta[0],0.5}};
+  disturbance_type w2_ub={{5+2*p1*s_eta[0],5+2*p1*s_eta[0],1.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
-
-
+  
   /* set up constraint functions with obtacles */
   double H[15][4] = {
     { 1  , 1.2, 0  ,   9 },
@@ -109,15 +108,15 @@ int main_parameters(const int p1, const int p2) {
 
   /* avoid function returns 1 if x is in avoid set  */
   auto avoid = [&H,ss,s_eta](const abs_type& idx) {
-    // state_type x;
-    // ss.itox(idx,x);
-    // double c1= s_eta[0]/2.0+1e-10;
-    // double c2= s_eta[1]/2.0+1e-10;
-    // for(size_t i=0; i<15; i++) {
-    //   if ((H[i][0]-c1) <= x[0] && x[0] <= (H[i][1]+c1) && 
-    //       (H[i][2]-c2) <= x[1] && x[1] <= (H[i][3]+c2))
-    //     return true;
-    // }
+    state_type x;
+    ss.itox(idx,x);
+    double c1= s_eta[0]/2.0+1e-10;
+    double c2= s_eta[1]/2.0+1e-10;
+    for(size_t i=0; i<15; i++) {
+      if ((H[i][0]-c1) <= x[0] && x[0] <= (H[i][1]+c1) && 
+          (H[i][2]-c2) <= x[1] && x[1] <= (H[i][3]+c2))
+        return true;
+    }
     return false;
   };
  

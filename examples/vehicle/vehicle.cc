@@ -220,11 +220,21 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  // std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
   dis.update_disturbance(w_2, w2_lb, w2_ub);
 
+   std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.compute_gb(tf_standard,rs_post,avoid);
+  
+ if(!getrusage(RUSAGE_SELF, &usage))
+   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+  std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
+  tt.toc();
+  
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
- 
-   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
+  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost, avoid);
+  if(!getrusage(RUSAGE_SELF, &usage))
+    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+  std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();
 
   /* define target set */
@@ -252,14 +262,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
     std::cout << "Done. \n";
 
 
-  std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
-  tt.tic();
-  abs.compute_gb(tf_standard,rs_post,avoid);
-  
- if(!getrusage(RUSAGE_SELF, &usage))
-   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
-  std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
-  tt.toc();
+ 
  
 
   // tt.tic();
