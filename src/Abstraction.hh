@@ -763,7 +763,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
             for (int i = 0; i < ncc; ++i)
             {
               neighbours=q;
-              for (int k = 0; k < dim; ++k)
+              for (int k = 0; k<dim; ++k)
               {
                 neighbours += cc_neighbours[i][k]*NN[k];
               }
@@ -775,10 +775,10 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
                 m_state_alphabet.itox(neighbours,x_n);
                 m_state_alphabet.itox(q,x);
                 
-                if(x_n[0]<=5.92 || x_n[1]<=3.92 || x_n[0]>= 9.28 || x_n[1]>= 7.28 ){
+                if(x[0]<=5.92 || x[1]<=3.92 || x[0]>= 9.28 || x[1]>= 7.28 ){
                  
                   sss++;
-                  //std::cout<<neighbours<<" "<<x_n[0]<<" "<<x_n[1]<<" "<<x_n[2]<<" "<<q<<" "<<x[0]<<x[1]<<x[2]<<std::endl;
+                  std::cout<<neighbours<<" "<<x_n[0]<<" "<<x_n[1]<<" "<<x_n[2]<<" "<<q<<" "<<x[0]<<x[1]<<x[2]<<std::endl;
                   
                   
                 }

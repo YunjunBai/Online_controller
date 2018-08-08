@@ -36,7 +36,7 @@ using ds_type = std::array<double, 2*state_dim>;
 using abs_type = scots::abs_type;
 
 
-int main_parameters() {
+int main_parameters(const int p1, const int p2) {
   /* to measure time */
   TicToc tt;
 
@@ -62,9 +62,9 @@ int main_parameters() {
   is.print_info();
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
-  disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{7.5,0,0}};
-  disturbance_type w2_ub={{10,2,0}};
+  disturbance_type w_2={{0.03, 0.1, 0.08}};
+  disturbance_type w2_lb={{7.5,0,-3.5}};
+  disturbance_type w2_ub={{10,2,3.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -98,9 +98,9 @@ int main_parameters() {
   write_to_file(ss,avoid,"obstacles");
   
 
-  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rs_post = [&dis, p2](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis, p2](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -113,9 +113,9 @@ int main_parameters() {
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
-    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha);
-    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha);
-    yy[2] = u[0]*std::tan(u[1]);
+    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha)*p2;
+    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha)*p2;
+    yy[2] = u[0]*std::tan(u[1])*p2;
     yy[3] = c*y[5] + w[0];
     yy[4] = c*y[5] + w[1];
     yy[5] = 0;
@@ -125,10 +125,10 @@ int main_parameters() {
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub,p2](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub,p2](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -143,9 +143,9 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
-    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha);
-    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha);
-    yy[2] = u[0]*std::tan(u[1]);
+    yy[0] = u[0]*std::cos(alpha+y[2])/std::cos(alpha)*p2;
+    yy[1] = u[0]*std::sin(alpha+y[2])/std::cos(alpha)*p2;
+    yy[2] = u[0]*std::tan(u[1])*p2;
     yy[3] = c*y[5] + w[0];
     yy[4] = c*y[5] + w[1];
     yy[5] = 0;
@@ -227,7 +227,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  	std::ofstream write;
   	std::ifstream read;
   	write.open("result.txt", std::ios::app);          
-  	write << " t1:"<<t1<<" t2:"<<t2<<" t3:"<<t3<<std::endl;
+  	write << "p1:"<<p1<<" p2:"<<p2<<" t1:"<<t1<<" t2:"<<t2<<" t3:"<<t3<<std::endl;
   	write.close();
   	read.close();
 
@@ -258,10 +258,10 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
 int  main()
 {
  
- // for (int k = 0; k < 5; ++k)
- // {
-  //  for(int r = 1; r<6; r++)
-      main_parameters();
- // }
+  for (int k = 0; k < 5; ++k)
+  {
+    for(int r = 1; r<6; r++)
+      main_parameters(k,r);
+  }
   return 1;
 }
