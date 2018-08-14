@@ -518,9 +518,10 @@ public:
 
 
 /*recompute transition locally*/
-template<class F2, class F3, class F4=decltype(params::avoid_abs)>
+template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
   void recompute_gb(TransitionFunction& new_transition,
                     const TransitionFunction& old_transition,
+                    F1& distance,
                     F2& d_lb,
                     F2& d_ub,
                     F3& rs_repost,
@@ -553,11 +554,15 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     /* for out of bounds check */
     state_type lower_left;
     state_type upper_right;
+    state_type re_lb;
+    state_type re_ub;
     /* copy data from m_state_alphabet */
     for(int i=0; i<dim; i++) {
       eta[i]=m_state_alphabet.get_eta()[i];
       lower_left[i]=m_state_alphabet.get_lower_left()[i];
       upper_right[i]=m_state_alphabet.get_upper_right()[i];
+      re_lb[i]=std::max(d_lb[i]-distance[i],lower_left[i]);
+      re_ub[i]=std::min(d_ub[i]+distance[i],upper_right[i]);
     }
     /* init in transition_function the members no_pre, no_post, pre_ptr */ 
     new_transition.init_infrastructure(N,M);
@@ -576,7 +581,6 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     abs_type neighbours;
     std::vector<std::vector<int>>  cc_neighbours;
 
-     
     int num[]={-1,0,1};
   /*init a queue which contains the states around (d_lb, d_ub), recompute transtions for queue, 
   * if in ODE, x gets into the region(lb,ub), then enqueue the  neighbours. repeat this process untill 
@@ -671,7 +675,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         continue;
       }
       /* loop over all inputs */
-      for(abs_type j=0; j<M; j++) {
+      for(abs_type j=0; j<M; j++){
         out_of_domain[q*M+j]=false;
         if(input_todo[q*M+j]){
           input_todo[q*M+j]=false;
@@ -752,7 +756,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
               new_transition.corner_IDs[q*(2*M)+2*j]=p;
             if(k==npost-1)
               new_transition.corner_IDs[q*(2*M)+2*j+1]=p;
-            }
+          }
             /* increment number of transitions by number of post */
            T+=npost;
            new_transition.m_no_post[q*M+j]=npost;
@@ -767,41 +771,22 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
               {
                 neighbours += cc_neighbours[i][k]*NN[k];
               }
-              if( 0 <= neighbours && neighbours < N && !recomputed_mark[neighbours*M+j]){
+              if(region(neighbours,re_lb,re_ub,dim,eta) &&0 <= neighbours && neighbours < N && !recomputed_mark[neighbours*M+j]){
                 recompute_queue.push(neighbours);
                 recomputed_mark[neighbours*M+j]=true;
-                input_todo[neighbours*M+j]=true;
-                state_type x_n;
-                m_state_alphabet.itox(neighbours,x_n);
-                m_state_alphabet.itox(q,x);
-                
-                if(x[0]<=5.92 || x[1]<=3.92 || x[0]>= 9.28 || x[1]>= 7.28 ){
-                 
-                  sss++;
-                  std::cout<<neighbours<<" "<<x_n[0]<<" "<<x_n[1]<<" "<<x_n[2]<<" "<<q<<" "<<x[0]<<x[1]<<x[2]<<std::endl;
-                  
-                  
-                }
+                input_todo[neighbours*M+j]=true;        
+             
               }
             }
-          }
-            
+          }  
         }
       }
-        
-      /* print progress */
-       // if(m_verbose) {
-       //   if(counter==0)
-       //     std::cout << "1st loop: ";
-       // }
-      //progress_re(N,M,counter,counter_states);
     }
-    std::cout<<"recomputing transitions untill queue empty";
   
-      
-      std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<conn<<" "<<sss<<std::endl;
+    std::cout<<"recomputing transitions untill queue empty";
+    std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<conn<<" "<<sss<<std::endl;
       /*copy from old transtions*/
-      for (abs_type i = 0; i < N; ++i)
+      for(abs_type i = 0; i < N; ++i )
       { 
         for (abs_type j = 0; j < M; ++j)
         {
@@ -811,11 +796,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
             T+=new_transition.m_no_post[i*M+j];
             new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
             new_transition.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
-          }
-          // if(new_transition.corner_IDs[i*(2*M)+2*j]!=standard_transition.corner_IDs[i*(2*M)+2*j] ||
-          //   new_transition.corner_IDs[i*(2*M)+2*j+1]!=standard_transition.corner_IDs[i*(2*M)+2*j+1])
-          //   std::cout<<"here:"<<i<<" "<<j<<" "<<recomputed_mark[i*M+j]<<std::endl;
-           
+          }           
         }
       }
 
@@ -948,7 +929,6 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     // }
   
   }//function closed
-
  
 bool region(abs_type q,state_type d_lb,state_type d_ub, int dim, state_type eta){
   state_type x;
@@ -961,6 +941,358 @@ bool region(abs_type q,state_type d_lb,state_type d_ub, int dim, state_type eta)
   return belong;
 }
 
+/*recompute transition locally*/
+template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
+  void recompute_mr(TransitionFunction& new_transition_com,
+                    const TransitionFunction& old_transition,
+                    F1& distance,
+                    F2& d_lb,
+                    F2& d_ub,
+                    F3& rs_post,
+                    F4& avoid=params::avoid_abs){
+
+    /* number of cells */
+    abs_type N=m_state_alphabet.size(); 
+    /* number of inputs */
+    abs_type M=m_input_alphabet.size();
+    /* number of transitions (to be computed) */
+    abs_ptr_type T=0; 
+    /* state space dimension */
+    int dim=m_state_alphabet.get_dim();
+    /* for display purpose */
+    abs_type counter=0;
+    /* some grid information */
+    std::vector<abs_type> NN=m_state_alphabet.get_nn();
+    /* variables for managing the region */
+    std::vector<abs_type> lb(dim);  /* lower-left corner */
+    std::vector<abs_type> ub(dim);  /* upper-right corner */
+    std::vector<abs_type> no(dim);  /* number of cells per dim */
+    std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+    /* radius of hyper interval containing the attainable set */
+    state_type eta;
+    state_type r;
+    /* state and input variables */
+    state_type x;
+    input_type u;
+    ds_type y;
+    /* for out of bounds check */
+    state_type lower_left;
+    state_type upper_right;
+    state_type re_lb;
+    state_type re_ub;
+    /* copy data from m_state_alphabet */
+    for(int i=0; i<dim; i++) {
+      eta[i]=m_state_alphabet.get_eta()[i];
+      lower_left[i]=m_state_alphabet.get_lower_left()[i];
+      upper_right[i]=m_state_alphabet.get_upper_right()[i];
+      re_lb[i]=std::max(d_lb[i]-distance[i],lower_left[i]);
+      re_ub[i]=std::min(d_ub[i]+distance[i],upper_right[i]);
+    }
+    /* init in transition_function the members no_pre, no_post, pre_ptr */ 
+    new_transition_com.init_infrastructure(N,M);
+    /* lower-left & upper-right corners of hyper rectangle of cells that cover attainable set */
+    //std::unique_ptr<abs_type[]> corner_IDs(new abs_type[N*M*2]());
+    /* is post of (i,j) out of domain ? */
+    std::unique_ptr<bool[]> out_of_domain(new bool[N*M]());
+    /* make if a states recompute or not.*/
+    std::vector<bool> recomputed_mark(N, false);
+    std::unique_ptr<bool[]> input_todo(new bool[N*M]());
+    /*contain the states which need to recompute*/
+    std::queue<abs_type> recompute_queue; 
+    std::vector<bool> out_of_region(N, true); 
+
+  /*init a queue which contains the states around (d_lb, d_ub), recompute transtions for queue, 
+  * if in ODE, x gets into the region(lb,ub), then enqueue the  neighbours. repeat this process untill 
+  * queue become empty. make all states in queue recomputed.
+  */
+    /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
+    abs_type nNRegion=1;
+    
+
+    for(int k=0; k<dim; k++) {
+      /* check for out of bounds */
+      double left = re_lb[k]-m_z[k];
+      double right = re_ub[k]+m_z[k];
+      if(left <= lower_left[k]-eta[k]/2.0)
+        left=lower_left[k];
+      if(right >= upper_right[k]+eta[k]/2.0)
+        right=upper_right[k];
+      
+      /* integer coordinate of lower left corner of region */
+      lb[k] = static_cast<abs_type>((left-lower_left[k]+eta[k]/2.0)/eta[k]);
+      /* integer coordinate of upper right corner of region */
+      ub[k] = static_cast<abs_type>((right-lower_left[k]+eta[k]/2.0)/eta[k]);
+      /* number of grid points in the region in each dimension */
+      no[k]=(ub[k]-lb[k]+1);
+      /* total number of region */
+      nNRegion*=no[k];
+      cc[k]=0;
+    }
+   
+    /* compute indices of Region */
+    for(abs_type k=0; k<nNRegion; k++) {
+      abs_type q=0;
+      for(int l=0; l<dim; l++)  {
+        q+=(lb[l]+cc[l])*m_state_alphabet.get_nn()[l];
+      }
+      cc[0]++;
+      for(int l=0; l<dim-1; l++) {
+        if(cc[l]==no[l]) {
+          cc[l]=0;
+          cc[l+1]++;
+        }
+      }
+
+      if (!recomputed_mark[q]){
+        recompute_queue.push(q);
+        recomputed_mark[q]=true;
+      }
+    }
+    std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
+    abs_type coun=0;
+
+   
+   abs_type conn=0;
+  
+   /*start big loop untill the recompute_queue become empty*/
+    while(!recompute_queue.empty())
+    {
+    /* q is a state which needs to recompute transitions, post of q*/
+      abs_type q = recompute_queue.front();
+      recompute_queue.pop();
+      coun++;
+          /* is q an element of the avoid symbols ? */
+      if(avoid(q)) {
+        for(abs_type j=0; j<M; j++) {
+          out_of_domain[q*M+j]=true;
+        }
+        continue;
+      }
+      /* loop over all inputs */
+      for(abs_type j=0; j<M; j++) {
+        out_of_domain[q*M+j]=false;         
+          /* get center x of cell */
+          m_state_alphabet.itox(q,x);
+          //if(x[0]<=5.92 || x[1]<=3.92 || x[0]>= 9.28 || x[1]>= 7.28 )
+          //    std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<std::endl;
+          /* cell radius (including measurement errors) */
+         for(int k=0; k<dim; k++){
+            r[k]=eta[k]/2.0+m_z[k];
+            y[k]=x[k];
+            y[k+dim]=r[k];
+          }
+        
+          /* current input */
+          m_input_alphabet.itox(j,u);
+          /* integrate system and radius growth bound */
+          /* the result is stored in x and r */
+
+          rs_post(y,u); //todo
+          
+          /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
+          for (int k = 0; k<dim; ++k)
+          {
+            x[k] = y[k];
+            r[k] = y[k+dim];
+          }
+          /* determine the cells which intersect with the attainable set: 
+           * discrete hyper interval of cell indices 
+           * [lb[0]; ub[0]] x .... x [lb[dim-1]; ub[dim-1]]
+           * covers attainable set 
+           */
+         
+          abs_type npost=1;
+          for(int k=0; k<dim; k++) {
+            /* check for out of bounds */
+            double left = x[k]-r[k]-m_z[k];
+            double right = x[k]+r[k]+m_z[k];
+            if(left <= lower_left[k]-eta[k]/2.0  || right >= upper_right[k]+eta[k]/2.0)  {
+              out_of_domain[q*M+j]=true;
+              break;
+            } 
+
+            /* integer coordinate of lower left corner of post */
+            lb[k] = static_cast<abs_type>((left-lower_left[k]+eta[k]/2.0)/eta[k]);
+            /* integer coordinate of upper right corner of post */
+            ub[k] = static_cast<abs_type>((right-lower_left[k]+eta[k]/2.0)/eta[k]);
+            /* number of grid points in the post in each dimension */
+            no[k]=(ub[k]-lb[k]+1);
+            /* total number of post */
+            npost*=no[k];
+            cc[k]=0;
+          }
+          //corner_IDs[q*(2*M)+2*j]=0;
+          //corner_IDs[q*(2*M)+2*j+1]=0;
+          if(out_of_domain[q*M+j])
+            continue;
+            
+          /* compute indices of post */
+          for(abs_type k=0; k<npost; k++) {
+            abs_type p=0;
+            for(int l=0; l<dim; l++) 
+              p+=(lb[l]+cc[l])*NN[l];
+            cc[0]++;
+            for(int l=0; l<dim-1; l++) {
+              if(cc[l]==no[l]) {
+                cc[l]=0;
+                cc[l+1]++;
+              }
+            }
+            /* (q,j,p) is a transition */    
+            /* increment number of pres for (p,j) */ 
+           // new_transition.m_no_pre[p*M+j]++;
+            /* store id's of lower-left and upper-right cell */
+            if(k==0)
+              new_transition_com.corner_IDs[q*(2*M)+2*j]=p;
+            if(k==npost-1)
+              new_transition_com.corner_IDs[q*(2*M)+2*j+1]=p;
+            }
+            /* increment number of transitions by number of post */
+           T+=npost;
+           new_transition_com.m_no_post[q*M+j]=npost;               
+      }
+    }
+    std::cout<<"recomputing transitions untill queue empty";
+  
+      
+      std::cout<<"total number of recomputing states * inputs:" <<coun<<"\n"<<conn<<std::endl;
+      /*copy from old transtions*/
+      for (abs_type i = 0; i < N; ++i)
+      { 
+        for (abs_type j = 0; j < M; ++j)
+        {
+          if(!recomputed_mark[i]){
+            // new_transition.m_no_pre[i*M+j]=old_transition.m_no_pre[i*M+j];
+            new_transition_com.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
+            T+=new_transition_com.m_no_post[i*M+j];
+            new_transition_com.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
+            new_transition_com.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
+          }
+          // if(new_transition.corner_IDs[i*(2*M)+2*j]!=standard_transition.corner_IDs[i*(2*M)+2*j] ||
+          //   new_transition.corner_IDs[i*(2*M)+2*j+1]!=standard_transition.corner_IDs[i*(2*M)+2*j+1])
+          //   std::cout<<"here:"<<i<<" "<<j<<" "<<recomputed_mark[i*M+j]<<std::endl;
+           
+        }
+      }
+
+       counter=0;
+      for(abs_type i=0; i<N; i++) {
+        /* loop over all inputs */
+        for(abs_type j=0; j<M; j++) {
+        /* is x an element of the overflow symbols ? */
+          if(out_of_domain[i*M+j]) 
+            continue;
+          /* extract lower-left and upper-bound points */
+          abs_type k_lb=new_transition_com.corner_IDs[i*2*M+2*j];
+          abs_type k_ub=new_transition_com.corner_IDs[i*2*M+2*j+1];
+          abs_type npost=1;
+
+          /* cell idx to coordinates */
+          for(int k=dim-1; k>=0; k--) {
+            /* integer coordinate of lower left corner */
+            lb[k]=k_lb/NN[k];
+            k_lb=k_lb-lb[k]*NN[k];
+            /* integer coordinate of upper right corner */
+            ub[k]=k_ub/NN[k];
+            k_ub=k_ub-ub[k]*NN[k];
+            /* number of grid points in each dimension in the post */
+            no[k]=(ub[k]-lb[k]+1);
+            /* total no of post of (i,j) */
+            npost*=no[k];
+            cc[k]=0;
+
+          }
+
+          for(abs_type k=0; k<npost; k++) {
+            abs_type p=0;
+            for(int l=0; l<dim; l++) 
+              p+=(lb[l]+cc[l])*NN[l];
+            cc[0]++;
+            for(int l=0; l<dim-1; l++) {
+              if(cc[l]==no[l]) {
+                cc[l]=0;
+                cc[l+1]++;
+              }
+            }
+            /* (i,j,p) is a transition */
+            new_transition_com.m_no_pre[p*M+j]++;
+          }
+        }
+        /* print progress */
+        if(m_verbose) {
+          if(counter==0)
+            std::cout << "2nd loop: ";
+        }
+        progress(i,N,counter);
+      }
+
+      /* compute pre_ptr */
+      abs_ptr_type sum=0;
+      for(abs_type i=0; i<N; i++) {
+        for(abs_type j=0; j<M; j++) {
+          sum+=new_transition_com.m_no_pre[i*M+j];
+          new_transition_com.m_pre_ptr[i*M+j]=sum;
+        }
+      }
+      
+      
+      /* allocate memory for pre list */
+      new_transition_com.init_transitions(T);
+      
+      /*loop: fill pre array */
+      counter=0;
+      for(abs_type i=0; i<N; i++) {
+        /* loop over all inputs */
+        for(abs_type j=0; j<M; j++) {
+        /* is x an element of the overflow symbols ? */
+          if(out_of_domain[i*M+j]) 
+            continue;
+          /* extract lower-left and upper-bound points */
+          abs_type k_lb=new_transition_com.corner_IDs[i*2*M+2*j];
+          abs_type k_ub=new_transition_com.corner_IDs[i*2*M+2*j+1];
+          abs_type npost=1;
+
+          /* cell idx to coordinates */
+          for(int k=dim-1; k>=0; k--) {
+            /* integer coordinate of lower left corner */
+            lb[k]=k_lb/NN[k];
+            k_lb=k_lb-lb[k]*NN[k];
+            /* integer coordinate of upper right corner */
+            ub[k]=k_ub/NN[k];
+            k_ub=k_ub-ub[k]*NN[k];
+            /* number of grid points in each dimension in the post */
+            no[k]=(ub[k]-lb[k]+1);
+            /* total no of post of (i,j) */
+            npost*=no[k];
+            cc[k]=0;
+          }
+
+          for(abs_type k=0; k<npost; k++) {
+            abs_type p=0;
+            for(int l=0; l<dim; l++) 
+              p+=(lb[l]+cc[l])*NN[l];
+            cc[0]++;
+            for(int l=0; l<dim-1; l++) {
+              if(cc[l]==no[l]) {
+                cc[l]=0;
+                cc[l+1]++;
+              }
+            }
+            /* (i,j,p) is a transition */
+            size_t size_preadd = sizeof(m_pre)/sizeof(abs_type);
+            if(new_transition_com.m_pre_ptr[p*M+j]>=0 && new_transition_com.m_pre_ptr[p*M+j]<size_preadd)
+              new_transition_com.m_pre[--new_transition_com.m_pre_ptr[p*M+j]]=i;
+          }
+        }
+        /* print progress */
+        if(m_verbose) {
+          if(counter==0)
+            std::cout << "3nd loop: ";
+        }
+        progress(i,N,counter);
+      }
+
+    } 
 };
 
 } /* close namespace */

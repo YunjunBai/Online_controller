@@ -143,7 +143,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
 
   std::cout << "Computing the initial transition function (before distrubance changes): " << std::endl;
   /* transition function of symbolic model */
-  scots::TransitionFunction tf_o1d,tf_new,tf_standard;
+  scots::TransitionFunction tf_o1d,tf_new,tf_standard,tf_new_com;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
   tt.tic();
@@ -155,6 +155,8 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
  // std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
   dis.update_disturbance(w_2, w2_lb, w2_ub);
+  state_type max_dynamic = {{i_ub[0]*p2,i_ub[0]*p2,i_ub[1]}};
+  state_type distance = dis.get_maxdistance(max_dynamic,tau);
 
    std::cout << "Computing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
@@ -167,10 +169,17 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, distance, w2_lb, w2_ub, rs_repost, avoid);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   double t2=tt.toc();
+
+   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.recompute_mr(tf_new_com,tf_o1d, distance, w2_lb, w2_ub, rs_post, avoid);
+ 
+   std::cout << "Number of new transitions: " << tf_new_com.get_no_transitions() << std::endl;
+  double t4=tt.toc();
   /* define target set */
   auto target = [&ss,&s_eta](const abs_type& idx) {
     state_type x;
@@ -198,7 +207,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
   std::ofstream write;
   std::ifstream read;
   write.open("result.txt", std::ios::app);          
-  write << "p1:"<<p1<<" p2:"<<p2<<" t1:"<<t1<<" t2:"<<t2<<" t3:"<<t3<<std::endl;
+  write << "  p1:"<<p1<<"   p2:"<<p2<<"   t1:"<<t1<<"   t2:"<<t2<<"   t3:"<<t3<<"  t4:"<<t4<<std::endl;
   write.close();
   read.close();
 

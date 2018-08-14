@@ -35,11 +35,13 @@ const int state_dim=3;
 const int input_dim=2;
 /* sampling time */
 const double tau = 0.25;
-
+using abs_type = scots::abs_type;
 /* data types of the state space elements and input 
  * space elements used in uniform grid and ode solver */
 using state_type = std::array<double,state_dim>;
 using input_type = std::array<double,input_dim>;
+using disturbance_type = std::array<double, state_dim>;
+using ds_type = std::array<double, 2*state_dim>;
 
 /* we integrate the aircraft ode by 0.25 sec (the result is stored in x)  */
 auto aircraft_post = [] (state_type &x, const input_type &u) {
@@ -90,7 +92,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{58,-3*M_PI/180,0}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{83,0,56}}; 
+  state_type s_ub={{70,0,30}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -105,23 +107,131 @@ int main() {
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
-  /* transition function of symbolic model */
-  scots::TransitionFunction tf;
-
   /* setup object to compute the transition function */
-  scots::Abstraction<state_type,input_type> abs(ss,is);
+  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   /* measurement disturbances  */
   state_type z={{0.0125,0.0025/180*M_PI,0.05}};
   abs.set_measurement_error_bound(z);
 
+  disturbance_type w_1={.108,0.002,0};
+  disturbance_type w_2={0.203, 0.001, 0};
+  disturbance_type w2_lb={60,-3*M_PI/180,3};
+  disturbance_type w2_ub={70,0,10};
+
+  scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
+
+  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+    /* find the distrubance for the given state */
+    state_type x;
+    state_type r;
+    for (int i=0; i<state_dim; i++){
+      x[i] = y[i];
+      r[i] = y[i+state_dim];
+    }
+    disturbance_type w = dis.get_disturbance(x,r);
+
+     double mg = 60000.0*9.81;
+    double mi = 1.0/60000;
+    double c=(1.25+4.2*u[1]);
+     double L[3][2];
+    L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
+    L[0][1]=9.81;
+    L[1][0]=0.002933+0.004802*u[1];
+    L[1][1]=0.003623;
+    L[2][0]=0.07483;
+    L[2][1]=83.22;
+    yy[0] = mi*(u[0]*std::cos(u[1])-(2.7+3.08*c*c)*y[0]*y[0]-mg*std::sin(y[1]));
+    yy[1] = (1.0/(60000*y[0]))*(u[0]*std::sin(u[1])+68.6*c*y[0]*y[0]-mg*std::cos(y[1]));
+    yy[2] = y[0]*std::sin(y[1]);
+    /* to account for input disturbances */
+    yy[3] = L[0][0]*y[3]+L[0][1]*y[4]+w[0]; /* L[0][2]=0 */
+    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+w[1]; /* L[1][2]=0 */
+    yy[5] = L[2][0]*y[3]+L[2][1]*y[4]+w[2]; /* L[2][2]=0 */
+  };
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
+};
+
+auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+  dis.set_intersection_check();
+  //dis.set_out_of_domain();
+  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+    /* find the distrubance for the given state */
+    state_type x;
+    state_type r;
+    for (int i=0; i<state_dim; i++){
+      x[i] = y[i];
+      r[i] = y[i+state_dim];
+    }
+    disturbance_type w = dis.get_disturbance(x,r);
+   
+    dis.intersection(x,r, w2_lb,w2_ub);
+    
+    double mg = 60000.0*9.81;
+    double mi = 1.0/60000;
+    double c=(1.25+4.2*u[1]);
+     double L[3][2];
+    L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
+    L[0][1]=9.81;
+    L[1][0]=0.002933+0.004802*u[1];
+    L[1][1]=0.003623;
+    L[2][0]=0.07483;
+    L[2][1]=83.22;
+    yy[0] = mi*(u[0]*std::cos(u[1])-(2.7+3.08*c*c)*y[0]*y[0]-mg*std::sin(y[1]));
+    yy[1] = (1.0/(60000*y[0]))*(u[0]*std::sin(u[1])+68.6*c*y[0]*y[0]-mg*std::cos(y[1]));
+    yy[2] = y[0]*std::sin(y[1]);
+    /* to account for input disturbances */
+    yy[3] = L[0][0]*y[3]+L[0][1]*y[4]+w[0]; /* L[0][2]=0 */
+    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+w[1]; /* L[1][2]=0 */
+    yy[5] = L[2][0]*y[3]+L[2][1]*y[4]+w[2]; /* L[2][2]=0 */
+  };
+  //ignore = dis.get_out_of_domain();
+  //if(ignore==false)    
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
+
+  if(dis.get_intersection_check()==true){
+    neigbour=true;
+  }
+  
+};
+
+ /* transition function of symbolic model */
+  scots::TransitionFunction tf_old, tf_new, tf_standard,tf_new_com;
+
   std::cout << "Computing the transition function: " << std::endl;
   tt.tic();
-  abs.compute_gb(tf,aircraft_post,radius_post);
+  abs.compute_gb(tf_old, rs_post);
   tt.toc();
-  if(!getrusage(RUSAGE_SELF, &usage))
-    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf.get_no_transitions() << std::endl;
-  std::cout << "Number of transitions: " << tf.get_no_transitions() << std::endl;
+  // if(!getrusage(RUSAGE_SELF, &usage))
+  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf.get_no_transitions() << std::endl;
+  // std::cout << "Number of transitions: " << tf.get_no_transitions() << std::endl;
 
+   dis.update_disturbance(w_2, w2_lb, w2_ub);
+  state_type max_dynamic = {{i_ub[0],i_ub[0],i_ub[1]}};
+  state_type distance = dis.get_maxdistance(max_dynamic,tau);
+
+   std::cout << "Computing the stardard transition function globally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.compute_gb(tf_standard,rs_post);
+  
+  if(!getrusage(RUSAGE_SELF, &usage))
+    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+  std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
+  tt.toc();
+
+  std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.recompute_gb(tf_new,tf_old, w2_lb, w2_ub, rs_repost);
+ 
+   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
+  tt.toc();
+
+   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.recompute_mr(tf_new_com,tf_old, distance, w2_lb, w2_ub, rs_post);
+ 
+   std::cout << "Number of new transitions: " << tf_new_com.get_no_transitions() << std::endl;
+  tt.toc();
   /* define target set */
   auto target = [&s_eta, &z, &ss](const scots::abs_type& abs_state) {
     state_type t_lb = {{63,-3*M_PI/180,0}};
@@ -150,7 +260,7 @@ int main() {
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::solve_reachability_game(tf,target);
+  scots::WinningDomain win=scots::solve_reachability_game(tf_new,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 

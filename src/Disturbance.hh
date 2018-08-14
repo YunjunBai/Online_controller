@@ -228,10 +228,18 @@ void intersection(state_type x,state_type r, state_type d_lb,state_type d_ub){
       tmp=false;
       break;
     }
-   
   }
   if(tmp)
     intersection_check = true;  
+}
+
+state_type get_maxdistance(state_type max_dynamic, const double tau){
+  state_type max_distance;
+  for (int i = 0; i < ss_dim; ++i)
+  {
+    max_distance[i]=max_dynamic[i]*tau+m_eta[i];
+  }
+  return max_distance;
 }
 
 bool get_intersection_check(){
