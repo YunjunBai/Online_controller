@@ -13,10 +13,10 @@
 #include <cstring>
 #include <memory>
 #include <vector>
-#include "TicToc.hh"
 #include "UniformGrid.hh"
 #include "TransitionFunction.hh"
 #include "Disturbance.hh"
+#include "InputOutput.hh"
 
 /** @namespace scots **/ 
 namespace scots {
@@ -521,6 +521,7 @@ public:
 template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
   void recompute_gb(TransitionFunction& new_transition,
                     const TransitionFunction& old_transition,
+                    const TransitionFunction& standard_transition,
                     F1& distance,
                     F2& d_lb,
                     F2& d_ub,
@@ -771,7 +772,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
               {
                 neighbours += cc_neighbours[i][k]*NN[k];
               }
-              if(region(neighbours,re_lb,re_ub,dim,eta) &&0 <= neighbours && neighbours < N && !recomputed_mark[neighbours*M+j]){
+              if(neighbours < N && !recomputed_mark[neighbours*M+j]){
                 recompute_queue.push(neighbours);
                 recomputed_mark[neighbours*M+j]=true;
                 input_todo[neighbours*M+j]=true;        
@@ -853,10 +854,16 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
 
       /* compute pre_ptr */
       abs_ptr_type sum=0;
+      int t=10;
       for(abs_type i=0; i<N; i++) {
         for(abs_type j=0; j<M; j++) {
           sum+=new_transition.m_no_pre[i*M+j];
           new_transition.m_pre_ptr[i*M+j]=sum;
+          if(t!=0&&new_transition.m_no_post[i*M+j]!=standard_transition.m_no_post[i*M+j]){
+            std::cout<<"Error:"<<i<<" "<<j<<" "<<recomputed_mark[i*M+j]<<std::endl;
+            t--;
+          }
+            
         }
       }
       
@@ -917,7 +924,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
         progress(i,N,counter);
       }
     
-
+    write_to_filebb(m_state_alphabet,m_input_alphabet,recomputed_mark,"recomputation_lazy");
   /*for all states, if recomputed_mark==ture, to get the differences of old. 
   * if the recomputed_mark==false, to copy the transitions from old transitions*/
 
@@ -1168,6 +1175,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
             new_transition_com.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
             new_transition_com.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
           }
+
           // if(new_transition.corner_IDs[i*(2*M)+2*j]!=standard_transition.corner_IDs[i*(2*M)+2*j] ||
           //   new_transition.corner_IDs[i*(2*M)+2*j+1]!=standard_transition.corner_IDs[i*(2*M)+2*j+1])
           //   std::cout<<"here:"<<i<<" "<<j<<" "<<recomputed_mark[i*M+j]<<std::endl;
@@ -1291,6 +1299,7 @@ template<class F1, class F2, class F3, class F4=decltype(params::avoid_abs)>
         }
         progress(i,N,counter);
       }
+      write_to_fileb(m_state_alphabet,recomputed_mark,"recomputation_max");
 
     } 
 };

@@ -74,7 +74,6 @@ void main_parameters(const int p1, const int p2) {
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
 
-
   /* avoid function returns 1 if x is in avoid set  */
   auto avoid = [](const abs_type& idx) {
     
@@ -169,7 +168,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, distance, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d,tf_standard, distance, w2_lb, w2_ub, rs_repost, avoid);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   double t2=tt.toc();

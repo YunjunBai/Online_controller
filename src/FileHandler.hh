@@ -218,7 +218,9 @@ private:
 public:
   FileReader(const std::string& filename) : FileHandler(filename) {};
   bool open() {
+    m_file.clear();
     m_file.open(m_filename.append(SCOTS_FH_EXTENSION));
+   
     return m_file.good();
   }
   void close() {

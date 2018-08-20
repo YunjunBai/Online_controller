@@ -197,6 +197,68 @@ bool write_to_file(const UniformGrid& grid, const F& atomic_prop, const std::str
     return true;
 }
 
+/** @brief write vector  bool to file **/
+template<class F>
+bool write_to_fileb(const UniformGrid& grid, const F& vec_bool, const std::string& filename) {
+    FileWriter writer(filename);
+
+    /* store grid information */
+    if(!write_to_file(grid,filename)) {
+        return false;
+    }
+    std::vector<abs_type> gp {};
+    for(abs_type i=0; i<grid.size(); i++) {
+        if(vec_bool[i]) {
+            gp.push_back(i);
+        }
+    }
+    if(!writer.open()) {
+        return false;
+    }
+    if(!writer.add_TYPE(SCOTS_GP_TYPE)) {
+        return false;
+    }
+    if(!writer.add_VECTOR(SCOTS_GP_DATA,gp)) {
+        return false;
+    }
+    writer.close();
+    return true;
+}
+
+template<class F>
+bool write_to_filebb(const UniformGrid& grid, const UniformGrid& grid_i, const F& vec_bool, const std::string& filename) {
+    FileWriter writer(filename);
+
+    /* store grid information */
+    if(!write_to_file(grid,filename)) {
+        return false;
+    }
+    std::vector<abs_type> gp {};
+    abs_type N=grid.size();
+    abs_type M=grid_i.size();
+    std::vector<bool> v(N,false);
+    for(abs_type i=0; i<N; i++) {
+        for (abs_type j = 0; j < M; ++j)
+        {
+           if(vec_bool[i*M+j]&& !v[i]) {
+            gp.push_back(i);
+            v[i]=true;
+            }
+        }
+    }
+    if(!writer.open()) {
+        return false;
+    }
+    if(!writer.add_TYPE(SCOTS_GP_TYPE)) {
+        return false;
+    }
+    if(!writer.add_VECTOR(SCOTS_GP_DATA,gp)) {
+        return false;
+    }
+    writer.close();
+    return true;
+}
+
 #ifdef SCOTS_BDD
 /** @brief write SymbolicSet to file **/
 inline

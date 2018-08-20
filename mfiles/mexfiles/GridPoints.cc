@@ -23,8 +23,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   /* read grid info from file */
   scots::UniformGrid grid;
   if(!scots::read_from_file(grid,filename)) {
-    mexErrMsgIdAndTxt("MATLAB:GridPoints",
-                      "couldn't not read UniformGrid from file: %s ",filename);
+    mexErrMsgIdAndTxt("MATLAB:GridPoints", 
+                      "couldn't not read UniformGrid from file why: %s ",filename);
   }
 
   /* read grid point indices */

@@ -34,7 +34,7 @@ const int state_dim=3;
 /* input space dim */
 const int input_dim=2;
 /* sampling time */
-const double tau = 0.25;
+const double tau = 0.00000005;
 using abs_type = scots::abs_type;
 /* data types of the state space elements and input 
  * space elements used in uniform grid and ode solver */
@@ -55,7 +55,7 @@ auto aircraft_post = [] (state_type &x, const input_type &u) {
     xx[2] = x[0]*std::sin(x[1]);
   };
   /* use 10 intermediate steps */
-  scots::runge_kutta_fixed4(rhs,x,u,state_dim,tau,5);
+  scots::runge_kutta_fixed4(rhs,x,u,state_dim,tau,10);
 };
 
 /* we integrate the growth bound by 0.25 sec (the result is stored in r)  */
@@ -77,7 +77,7 @@ auto radius_post = [] (state_type &r, const state_type &, const input_type &u) {
     rr[2] = L[2][0]*r[0]+L[2][1]*r[1]+w[2]; /* L[2][2]=0 */
   };
   /* use 10 intermediate steps */
-  scots::runge_kutta_fixed4(rhs,r,u,state_dim,tau,5);
+  scots::runge_kutta_fixed4(rhs,r,u,state_dim,tau,30);
 };
 
 int main() {
@@ -92,7 +92,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{58,-3*M_PI/180,0}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{70,0,30}}; 
+  state_type s_ub={{70,0,10}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -114,9 +114,9 @@ int main() {
   abs.set_measurement_error_bound(z);
 
   disturbance_type w_1={.108,0.002,0};
-  disturbance_type w_2={0.203, 0.001, 0};
-  disturbance_type w2_lb={60,-3*M_PI/180,3};
-  disturbance_type w2_ub={70,0,10};
+  disturbance_type w_2={0.203, 0.001, 0.001};
+  disturbance_type w2_lb={58,-3*M_PI/180,0};
+  disturbance_type w2_ub={70,0,4};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -131,10 +131,10 @@ int main() {
     }
     disturbance_type w = dis.get_disturbance(x,r);
 
-     double mg = 60000.0*9.81;
+    double mg = 60000.0*9.81;
     double mi = 1.0/60000;
     double c=(1.25+4.2*u[1]);
-     double L[3][2];
+    double L[3][2];
     L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
     L[0][1]=9.81;
     L[1][0]=0.002933+0.004802*u[1];
@@ -192,7 +192,6 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   if(dis.get_intersection_check()==true){
     neigbour=true;
   }
-  
 };
 
  /* transition function of symbolic model */
@@ -207,7 +206,10 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   // std::cout << "Number of transitions: " << tf.get_no_transitions() << std::endl;
 
    dis.update_disturbance(w_2, w2_lb, w2_ub);
-  state_type max_dynamic = {{i_ub[0],i_ub[0],i_ub[1]}};
+   double max_1=(1.0/60000) * (i_ub[0]-(2.7+3.08*std::pow(1.25+4.2*i_lb[1],2))*std::pow(s_lb[0],2)+ 60000.0*9.81);
+   double max_2=(1/(60000*s_lb[0])) * (i_ub[0] + (68.6*(1.25+4.2*i_ub[1]))*std::pow(s_ub[0],2) + 60000.0*9.81);
+   double max_3=s_ub[0];
+  state_type max_dynamic = {{ max_1, max_2 , max_3}};
   state_type distance = dis.get_maxdistance(max_dynamic,tau);
 
    std::cout << "Computing the stardard transition function globally (after distrubance changes): " << std::endl;
@@ -221,7 +223,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_old, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_old,tf_standard, distance, w2_lb, w2_ub, rs_repost);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();

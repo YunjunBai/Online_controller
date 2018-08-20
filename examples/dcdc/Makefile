@@ -1,8 +1,8 @@
 #
 # compiler
 #
-#CC        = g++
-CC       	  = clang++
+CC        = g++
+#CC       	  = clang++
 CXXFLAGS 		= -g -Wall -Wextra -std=c++11
 CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG
 

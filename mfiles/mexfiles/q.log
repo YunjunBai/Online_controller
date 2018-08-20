@@ -1,0 +1,24 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016/Debian) (preloaded format=mex 2018.3.21)  19 AUG 2018 11:26
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**C++
+(/usr/share/texlive/texmf-dist/tex/latex/tools/q.tex
+! Interruption.
+<to be read again> 
+                   \immediate 
+<everyjob> \immediate 
+                      \write 16{This is MeX  Version 1.05  18 XII 1993  (B. ...
+l.1 
+    %%
+? q
+OK, entering \batchmode...
+This is MeX  Version 1.05  18 XII 1993  (B. Jackowski & M. Ry\'cko)
+ File ignored
+)
+! Emergency stop.
+<*> C++
+       
+*** (job aborted, no legal \end found)
+
+No pages of output.

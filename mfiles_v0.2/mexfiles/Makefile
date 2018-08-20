@@ -1,7 +1,7 @@
 #
 # matlab root 
 #
-MATLABROOT	= /usr/lib/matlab-9.4/
+MATLABROOT	= /usr/lib/matlab-9.1
 #
 # compiler
 #

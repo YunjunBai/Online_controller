@@ -29,32 +29,32 @@ x0=[0.6 0.6 0];
 
 
 % load controller from file
-controller=StaticController('controller');
+%controller=StaticController('controller');
 
 % simulate closed loop system
-y=x0;
-v=[];
-loop=3000;
-
-% tau
-tau=0.3;
-
-while(loop>0)
-    loop=loop-1;
-  
-  if (lb(1) <= y(end,1) & y(end,1) <= ub(1) &&...
-      lb(2) <= y(end,2) & y(end,2) <= ub(2))
-    break;
-  end 
-
-  u=controller.control(y(end,:));
-  v=[v; u];
-
-  [t x]=ode45(@unicycle_ode,[0 tau], y(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
-  
-  y=[y; x(end,:)];
-
-end
+% y=x0;
+% v=[];
+% loop=3000;
+% 
+% % tau
+% tau=0.3;
+% 
+% while(loop>0)
+%     loop=loop-1;
+%   
+%   if (lb(1) <= y(end,1) & y(end,1) <= ub(1) &&...
+%       lb(2) <= y(end,2) & y(end,2) <= ub(2))
+%     break;
+%   end 
+% 
+%   u=controller.control(y(end,:));
+%   v=[v; u];
+% 
+%   [t x]=ode45(@unicycle_ode,[0 tau], y(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
+%   
+%   y=[y; x(end,:)];
+% 
+% end
 
 %% plot the vehicle domain
 % colors
