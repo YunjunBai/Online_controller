@@ -56,7 +56,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{58,-3*M_PI/180,0}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{70,0,20}}; 
+  state_type s_ub={{70,0,55}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
