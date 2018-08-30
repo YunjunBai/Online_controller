@@ -29,11 +29,11 @@
 #END
 #VECTOR:LOWER_LEFT
 #BEGIN:1
--2
+-3
 #END
 #VECTOR:UPPER_RIGHT
 #BEGIN:1
-2
+3
 #END
 #TYPE:WINNINGDOMAIN
 #SCOTS:i (state) j_0 ... j_n (valid inputs)

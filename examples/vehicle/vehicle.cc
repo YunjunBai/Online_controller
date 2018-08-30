@@ -93,8 +93,8 @@ int main() {
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.03, 0.1, 0.08}};
-  disturbance_type w2_lb={{3,3,0.5}};
-  disturbance_type w2_ub={{5,5,1.5}};
+  disturbance_type w2_lb={{8,0,0.5}};
+  disturbance_type w2_ub={{10,3,1.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -225,13 +225,13 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   abs.compute_gb(tf_standard,rs_post,avoid);
   
  if(!getrusage(RUSAGE_SELF, &usage))
-   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_standard.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
   tt.toc();
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, tf_standard, w2_lb, w2_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
@@ -253,7 +253,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::static_reachability_game(tf_o1d,target);
+  scots::WinningDomain win=scots::solve_reachability_game(tf_new,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 

@@ -1,0 +1,19 @@
+*************************************************
+* Vehicle System in a apartment
+*************************************************
+* p1: the size of entrence to new disturbance region; 
+* p2: the speed of system dynamics;
+* t1: time of computing abstraction initially;
+* t2: time of updating abstraction locally;
+* t3: time of updating abstraction grobally.
+****************************************************
+* 9.7%->12.9%
+****************************************************
+
+
+p1:0 p2:1 t1:5.38062 t2:2.51586 t3:12.6372
+p1:0 p2:1 t1:5.38969 t2:2.53262 t3:12.3736
+p1:0 p2:1 t1:5.37748 t2:2.61944 t3:12.2999
+p1:0 p2:1 t1:5.37423 t2:2.6335 t3:12.2491
+p1:0 p2:1 t1:4.7819 t2:2.03107 t3:10.8139
+p1:0 p2:1 t1:4.76172 t2:1.99677 t3:10.8096

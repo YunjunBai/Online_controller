@@ -43,42 +43,6 @@ using input_type = std::array<double,input_dim>;
 using disturbance_type = std::array<double, state_dim>;
 using ds_type = std::array<double, 2*state_dim>;
 
-/* we integrate the aircraft ode by 0.25 sec (the result is stored in x)  */
-auto aircraft_post = [] (state_type &x, const input_type &u) {
-  /* the ode describing the aircraft */
-  auto rhs =[] (state_type& xx,  const state_type &x, const input_type &u) {
-    double mg = 60000.0*9.81;
-    double mi = 1.0/60000;
-    double c=(1.25+4.2*u[1]);
-    xx[0] = mi*(u[0]*std::cos(u[1])-(2.7+3.08*c*c)*x[0]*x[0]-mg*std::sin(x[1]));
-    xx[1] = (1.0/(60000*x[0]))*(u[0]*std::sin(u[1])+68.6*c*x[0]*x[0]-mg*std::cos(x[1]));
-    xx[2] = x[0]*std::sin(x[1]);
-  };
-  /* use 10 intermediate steps */
-  scots::runge_kutta_fixed4(rhs,x,u,state_dim,tau,10);
-};
-
-/* we integrate the growth bound by 0.25 sec (the result is stored in r)  */
-auto radius_post = [] (state_type &r, const state_type &, const input_type &u) {
-  /* the ode for the growth bound */
-  auto rhs =[] (state_type& rr,  const state_type &r, const input_type &u) {
-    /* lipschitz matrix computed with mupad/mathematica check the ./helper directory */
-    double L[3][2];
-    L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
-    L[0][1]=9.81;
-    L[1][0]=0.002933+0.004802*u[1];
-    L[1][1]=0.003623;
-    L[2][0]=0.07483;
-    L[2][1]=83.22;
-    /* to account for input disturbances */
-    const state_type w={{.108,0.002,0}};
-    rr[0] = L[0][0]*r[0]+L[0][1]*r[1]+w[0]; /* L[0][2]=0 */
-    rr[1] = L[1][0]*r[0]+L[1][1]*r[1]+w[1]; /* L[1][2]=0 */
-    rr[2] = L[2][0]*r[0]+L[2][1]*r[1]+w[2]; /* L[2][2]=0 */
-  };
-  /* use 10 intermediate steps */
-  scots::runge_kutta_fixed4(rhs,r,u,state_dim,tau,30);
-};
 
 int main() {
   /* to measure time */
@@ -92,7 +56,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{58,-3*M_PI/180,0}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{70,0,10}}; 
+  state_type s_ub={{70,0,20}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -206,34 +170,34 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   // std::cout << "Number of transitions: " << tf.get_no_transitions() << std::endl;
 
    dis.update_disturbance(w_2, w2_lb, w2_ub);
-   double max_1=(1.0/60000) * (i_ub[0]-(2.7+3.08*std::pow(1.25+4.2*i_lb[1],2))*std::pow(s_lb[0],2)+ 60000.0*9.81);
-   double max_2=(1/(60000*s_lb[0])) * (i_ub[0] + (68.6*(1.25+4.2*i_ub[1]))*std::pow(s_ub[0],2) + 60000.0*9.81);
-   double max_3=s_ub[0];
-  state_type max_dynamic = {{ max_1, max_2 , max_3}};
-  state_type distance = dis.get_maxdistance(max_dynamic,tau);
+  //  double max_1=(1.0/60000) * (i_ub[0]-(2.7+3.08*std::pow(1.25+4.2*i_lb[1],2))*std::pow(s_lb[0],2)+ 60000.0*9.81);
+  //  double max_2=(1/(60000*s_lb[0])) * (i_ub[0] + (68.6*(1.25+4.2*i_ub[1]))*std::pow(s_ub[0],2) + 60000.0*9.81);
+  //  double max_3=s_ub[0];
+  // state_type max_dynamic = {{ max_1, max_2 , max_3}};
+  // state_type distance = dis.get_maxdistance(max_dynamic,tau);
 
    std::cout << "Computing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.compute_gb(tf_standard,rs_post);
   
   if(!getrusage(RUSAGE_SELF, &usage))
-    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_standard.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
   tt.toc();
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_old,tf_standard, distance, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_old, tf_standard, w2_lb, w2_ub, rs_repost);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();
 
-   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
-  tt.tic();
-  abs.recompute_mr(tf_new_com,tf_old, distance, w2_lb, w2_ub, rs_post);
+  //  std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
+  // tt.tic();
+  // abs.recompute_mr(tf_new_com,tf_old, distance, w2_lb, w2_ub, rs_post);
  
-   std::cout << "Number of new transitions: " << tf_new_com.get_no_transitions() << std::endl;
-  tt.toc();
+  //  std::cout << "Number of new transitions: " << tf_new_com.get_no_transitions() << std::endl;
+  // tt.toc();
   /* define target set */
   auto target = [&s_eta, &z, &ss](const scots::abs_type& abs_state) {
     state_type t_lb = {{63,-3*M_PI/180,0}};

@@ -171,8 +171,8 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
  // std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
   dis.update_disturbance(w_2, w2_lb, w2_ub);
-  state_type max_dynamic = {i_ub[0],i_ub[0],i_ub[1]};
-  state_type distance = dis.get_maxdistance(w2_lb, w2_ub, max_dynamic,tau);
+  //state_type max_dynamic = {i_ub[0],i_ub[0],i_ub[1]};
+  //state_type distance = dis.get_maxdistance(max_dynamic,tau);
    std::cout << "Computing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.compute_gb(tf_standard,rs_post,avoid);
@@ -184,7 +184,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,distance, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();

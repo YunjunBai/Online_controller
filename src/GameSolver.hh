@@ -52,7 +52,7 @@ namespace params {
  * @return -  WinningDomain that contains the set of winning states and valid inputs 
  **/
 template<class F1, class F2=decltype(params::avoid)>
-WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
+WinningDomain solve_reachability_game(const TransitionFunction& trans_function,                                   
                                       F1& target, 
                                       F2& avoid = params::avoid,
                                       std::vector<double> & value = params::value ) {

@@ -84,10 +84,13 @@ public:
   std::unique_ptr<abs_type[]> m_no_pre;    
   /** @brief array[N*M] saving the number of post for each state-input pair (i,j) **/
   std::unique_ptr<abs_type[]> m_no_post;    
+ 
   /*difference between this and another transition class, deletion or insertion*/
   std::queue<abs_type> m_diff; 
  
   std::unique_ptr<abs_type[]> corner_IDs;
+    /* is post of (i,j) out of domain ? */
+  std::unique_ptr<bool[]> out_of_domain;
 public:
   /* @cond  EXCLUDE from doxygen */
   /* default constructor */
@@ -98,7 +101,8 @@ public:
                          m_pre_ptr(nullptr),
                          m_no_pre(nullptr),
                          m_no_post(nullptr),
-                         corner_IDs(nullptr) { }  
+                         corner_IDs(nullptr),
+                         out_of_domain(nullptr) { }  
 
 
   /* move constructor */
@@ -116,6 +120,7 @@ public:
     m_no_pre=std::move(other.m_no_pre);
     m_no_post=std::move(other.m_no_post);
     corner_IDs=std::move(other.corner_IDs);
+    out_of_domain=std::move(other.out_of_domain);
     other.m_no_states=0;
     other.m_no_inputs=0;
     other.m_no_transitions=0;
@@ -236,6 +241,8 @@ public:
     m_no_post.reset(new abs_type[no_state*no_inputs] ());
     /* lower-left & upper-right corners of hyper rectangle of cells that cover attainable set */
     corner_IDs.reset(new abs_type[no_state*no_inputs*2]());
+    out_of_domain.reset(new bool[no_state*no_inputs]());
+    
   }
 
   /** @brief allocate memory for pre array **/
@@ -255,6 +262,7 @@ public:
     m_no_pre.reset(nullptr);
     m_no_post.reset(nullptr);
     corner_IDs.reset(nullptr);
+    out_of_domain.reset(nullptr);
   }
   
 

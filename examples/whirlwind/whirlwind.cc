@@ -58,9 +58,9 @@ void  main_parameters(const int p1, const int p2){
   
   /* construct grid for the input space */
   /* lower bounds of the hyper rectangle */
-  input_type i_lb={-2};
+  input_type i_lb={-3};
   /* upper bounds of the hyper rectangle */
-  input_type i_ub={2};
+  input_type i_ub={3};
   /* grid node distance diameter */
   input_type i_eta={0.05};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
@@ -68,8 +68,8 @@ void  main_parameters(const int p1, const int p2){
 
   disturbance_type w_1={0.01, 0.005};
   disturbance_type w_2={0.03, 0.001};
-  disturbance_type w2_lb={0-2*p1*s_eta[0], 0-2*p2*s_eta[1]};
-  disturbance_type w2_ub={3+2*p1*s_eta[0], M_PI*0.5+2*p1*s_eta[1]};
+  disturbance_type w2_lb={5-2*p1*s_eta[0], 0-2*p2*s_eta[1]};
+  disturbance_type w2_ub={9+2*p1*s_eta[0], M_PI*0.3+2*p1*s_eta[1]};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -159,7 +159,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,p2](ds_type &y, input_type &u, bool &neigbour
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,tf_standard, distance, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   double t2=tt.toc();
