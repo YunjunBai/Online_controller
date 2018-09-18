@@ -73,7 +73,7 @@ plot_domain
 %plot(y(1,1),y(1,2),'.','color',colors(5,:),'markersize',20)
 
 box on
-axis([-0.5 10.5 -0.5 6.5])
+axis([0 10 0 6])
 
 %set(gcf,'paperunits','centimeters','paperposition',[0 0 16 10],'papersize',[16 6])
 
@@ -100,7 +100,7 @@ colors=get(groot,'DefaultAxesColorOrder');
 
 alpha=0.2;
 
-v=[7.5 0;10 0; 7.5 1.8; 10 1.8];
+v=[4.4 1;7 1; 4.4 3.3; 7 3.3];
 patch('vertices',v,'faces',[1 2 4 3],'facea', alpha, 'edgec',colors(2,:));
 
 
@@ -112,17 +112,17 @@ v=[4.0     0  ;4.2  0 ; 4.0  2 ; 4.2  2  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 v=[4.7     1.8;7.5  1.8   ; 4.7   2.0    ; 7.5 2.0   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[4.0 3.5; 4.2 3.5; 4.0 6; 4.2 6];
+v=[4.0 3.4; 4.2 3.4; 4.0 6; 4.2 6];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[4.7 3.5; 7.5 3.5; 4.7 3.7; 7.5 3.7];
+v=[4.7 3.4; 7.5 3.4; 4.7 3.6; 7.5 3.6];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 v=[7.3   0  ;7.5  0   ; 7.3   2.0   ; 7.5 2.0  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[7.3   3.5  ;7.5  3.5   ; 7.3   6.0    ; 7.5  6.0   ];
+v=[7.3   3.4  ;7.5  3.4   ; 7.3   6.0    ; 7.5  6.0   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 v=[8.3   1.8  ;10.0  1.8   ;8.3   2.0   ; 10.0  2.0  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[8.3   3.5  ;10.0    3.5   ; 8.3   3.7    ; 10.0   3.7   ];
+v=[8.3   3.4  ;10.0    3.4   ; 8.3   3.6    ; 10.0   3.6   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 
 

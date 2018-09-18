@@ -15,8 +15,8 @@ colors=get(groot,'DefaultAxesColorOrder');
 re_max=GridPoints('recomputation_max');
 re_max=unique(re_max(:,[1 2]),'rows');
 figure(1);
-ploR2cartS(re_max(:,2),re_max(:,1));
-%[re_max_x,re_max_y]=pol2cart(re_max(:,2),re_max(:,1));
+%ploR2cartS(re_max(:,2),re_max(:,1));
+[re_max_x,re_max_y]=pol2cart(re_max(:,2),re_max(:,1));
 
 plot(re_max_x,re_max_y,'.','color',colors(5,:));
 %patch(re_max_x, re_max_y, 'white');

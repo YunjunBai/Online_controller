@@ -299,11 +299,12 @@ public:
       size_t size=0;
       size_t counter=0;
       std::string match = SCOTS_FH_VECTOR + vector_name;
+      std::string match_2=SCOTS_FH_MATRIX;
       vector.clear();
       /* first get the size of the vector */
       while(std::getline(m_file,m_line)) {
         counter++;
-        if(m_line.find(match)!=std::string::npos) {
+        if(m_line.find(match)!=std::string::npos || m_line.find(match_2)!=std::string::npos) {
           if(std::getline(m_file,m_line)) {
             if(m_line.find(SCOTS_FH_BEGIN)!=std::string::npos) {
               std::istringstream stream(m_line.substr(m_line.find(":")+1));
@@ -321,15 +322,17 @@ public:
       vector.resize(size);
       for(size_t index = 0; index < size; index++) {
         if(std::getline(m_file,m_line)) {
-          if(m_line.find(SCOTS_FH_SYMBOL)!=std::string::npos) {
-            vector.clear();
-            return 0;
-          }
+          // if(m_line.find(SCOTS_FH_SYMBOL)!=std::string::npos) {
+          //   vector.clear();
+          //   std::cout<<"here1"<<std::endl;
+          //   return 0;
+          // }
           counter++;
           std::istringstream stream(m_line);
           stream >> vector[index];
         } else {
           vector.clear();
+          std::cout<<"here2"<<std::endl;
           return 0;
         }
       }
@@ -340,6 +343,7 @@ public:
         }
       }
     }
+    std::cout<<"here2"<<std::endl;
     return 0;
   }
   template<class T>

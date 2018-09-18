@@ -208,7 +208,6 @@ public:
         transition_function.out_of_domain[i*M+j]=false;
         /* get center x of cell */
         m_state_alphabet.itox(i,x);
-       
         /* cell radius (including measurement errors) */
         for(int k=0; k<dim; k++){
           r[k]=eta[k]/2.0+m_z[k];
@@ -220,8 +219,13 @@ public:
         m_input_alphabet.itox(j,u);
         /* integrate system and radius growth bound */
         /* the result is stored in x and r */
-        //bool ignore=false;
-        rs_post(y,u);
+        bool ignore=false;
+        if (i==12058 && j==27)
+        {
+          ignore=true;
+          std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<u[0]<<" "<<u[1]<<std::endl;
+        }
+        rs_post(y,u,ignore);
         //if(ignore==true)
         //  continue;
         for (int k = 0; k<dim; ++k)
@@ -229,6 +233,8 @@ public:
           x[k]=y[k];
           r[k]=y[k+dim];
         }
+        
+        
         /* determine the cells which intersect with the attainable set: 
          * discrete hyper interval of cell indices 
          * [lb[0]; ub[0]] x .... x [lb[dim-1]; ub[dim-1]]
@@ -691,8 +697,13 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           /* integrate system and radius growth bound */
           /* the result is stored in x and r */
           bool intersection_with_region = false;
-          //bool ignore=false;
-          rs_repost(y,u,intersection_with_region); //todo
+         bool ignore=false;
+        if (q==12058 && j==27)
+        {
+          ignore=true;
+          std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<u[0]<<" "<<u[1]<<std::endl;
+        }
+          rs_repost(y,u,intersection_with_region,ignore); //todo
           //if(ignore==true)
           //  continue;
           /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
@@ -860,7 +871,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       for(abs_type i=0; i<N; i++) {
         for(abs_type j=0; j<M; j++) {
           sum+=new_transition.m_no_pre[i*M+j];
-          new_transition.m_pre_ptr[i*M+j]=sum;      
+          new_transition.m_pre_ptr[i*M+j]=sum;     
         }
       }
         

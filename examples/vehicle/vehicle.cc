@@ -92,9 +92,9 @@ int main() {
   is.print_info();
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
-  disturbance_type w_2={{0.03, 0.1, 0.08}};
-  disturbance_type w2_lb={{8,0,0.5}};
-  disturbance_type w2_ub={{10,3,1.5}};
+  disturbance_type w_2={{0.03, 0.1, 0.05}};
+  disturbance_type w2_lb={{3,3 ,-3.5}};
+  disturbance_type w2_ub={{5,5,3.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -250,8 +250,17 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
    /* write target to file */
   write_to_file(ss,target,"target");
 
- 
-  std::cout << "\nSynthesis: " << std::endl;
+   std::cout << "\nSynthesis: old controller" << std::endl;
+  tt.tic();
+  scots::WinningDomain win_1=scots::solve_reachability_game(tf_o1d,target);
+  tt.toc();
+  std::cout << "Winning domain size: " << win_1.get_size() << std::endl;
+
+  std::cout << "\nWrite controller to controller_1.scs \n";
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_1"))
+    std::cout << "Done. \n";
+
+  std::cout << "\nSynthesis: new controller " << std::endl;
   tt.tic();
   scots::WinningDomain win=scots::solve_reachability_game(tf_new,target);
   tt.toc();

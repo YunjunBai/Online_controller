@@ -25,7 +25,7 @@ close all
 lb=[9 0];
 ub=lb+0.5;
 % initial state
-x0=[0.6 0.6 0];
+x0=[0.6 9.0];
 
 
 % load controller from file

@@ -46,6 +46,25 @@ using ds_type = std::array<double, 2*state_dim>;
 /* abbrev of the type for abstract states and inputs */
 using abs_type = scots::abs_type;
 
+/* we integrate the vehicle ode by tau sec (the result is stored in x)  */
+// auto  vehicle_post = [](state_type &x, const input_type &u) {
+//   /* the ode describing the vehicle */
+//   auto rhs =[](state_type& xx,  const state_type &x, const input_type &u) {
+//     double alpha=std::atan(std::tan(u[1])/2.0);
+//     xx[0] = u[0]*std::cos(alpha+x[2])/std::cos(alpha);
+//     xx[1] = u[0]*std::sin(alpha+x[2])/std::cos(alpha);
+//     xx[2] = u[0]*std::tan(u[1]);
+//   };
+//   /* simulate (use 10 intermediate steps in the ode solver) */
+//   scots::runge_kutta_fixed4(rhs,x,u,state_dim,tau,10);
+// };
+
+/* we integrate the growth bound by 0.3 sec (the result is stored in r)  */
+// auto radius_post = [](state_type &r, const state_type &, const input_type &u, const disturbance_type &w) {
+//   double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
+//   r[0] = r[0]+c*r[2]*tau + w[0]*tau;
+//   r[1] = r[1]+c*r[2]*tau + w[1]*tau;
+// };
 
 int main() {
   /* to measure time */
@@ -55,7 +74,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{0,0,-3.5}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{10,6,3.5}};
+  state_type s_ub={{3,3,3.5}};
   /* grid node distance diameter */
   state_type s_eta={{.2,.2,.2}};
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
@@ -72,30 +91,25 @@ int main() {
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
-  disturbance_type w_1={{0.05, 0.05, 0.05}};
-  disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{4.4,1,-3.5}};
-  disturbance_type w2_ub={{7,3.4,3.5}};
+  disturbance_type w_1={{0, 0, 0}};
+  disturbance_type w_2={{0.15, 0.15, 0.3}};
+  disturbance_type w2_lb={{0,0.5 ,-3.5}};
+  disturbance_type w2_ub={{0.8,2.8,3.5}};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  double H[8][4] = {
-    { 4  , 4.2, 0  ,   2 },
-    { 4.5, 7.5, 1.8  , 2 },
-    { 7.3, 7.5, 0  ,   2 },
-    { 8, 10, 1.8  ,   2 },
-    { 4, 4.2, 3.4  ,  6 },
-    { 4.5, 7.5  , 3.4  , 3.6},
-    { 7.3, 7.5  , 3.4  , 6 },
-    { 8  , 10, 3.4  ,  3.6 }
+  /* set up constraint functions with obtacles */
+  double H[1][4] = {
+    { 1.4, 1.6  , 0  ,  2 }
   };
+
   /* avoid function returns 1 if x is in avoid set  */
   auto avoid = [&H,ss,s_eta](const abs_type& idx) {
     state_type x;
     ss.itox(idx,x);
     double c1= s_eta[0]/2.0+1e-10;
     double c2= s_eta[1]/2.0+1e-10;
-    for(size_t i=0; i<8; i++) {
+    for(size_t i=0; i<1; i++) {
       if ((H[i][0]-c1) <= x[0] && x[0] <= (H[i][1]+c1) && 
           (H[i][2]-c2) <= x[1] && x[1] <= (H[i][3]+c2))
         return true;
@@ -107,9 +121,9 @@ int main() {
   write_to_file(ss,avoid,"obstacles");
   
 
-  auto rs_post = [&dis](ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -118,10 +132,7 @@ int main() {
       r[i] = y[i+state_dim];
     }
     disturbance_type w = dis.get_disturbance(x,r);
-    if (ignore)
-    {
-      std::cout<<"x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" w:"<<w[0]<<" "<<w[1]<<std::endl;
-    }
+     
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
@@ -133,14 +144,16 @@ int main() {
     yy[5] = 0;
   };
   //while(ignore==false){
-    scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+    scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
   //  ignore = dis.get_out_of_domain();
+  
+   
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, bool &ignore) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -148,12 +161,8 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-
     disturbance_type w = dis.get_disturbance(x,r);
-    if (ignore)
-    {
-      std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<w[0]<<" "<<w[1]<<std::endl;
-    }
+   
     dis.intersection(x,r, w2_lb,w2_ub);
     
     //disturbance_type w = {0.05, 0.05, 0.05};
@@ -169,13 +178,15 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;
   }
   
 };
+
+
 
   std::cout << "\nComputing the initial transition function (before distrubance changes): " << std::endl;
   /* transition function of symbolic model */
@@ -199,13 +210,13 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
   abs.compute_gb(tf_standard,rs_post,avoid);
   
  if(!getrusage(RUSAGE_SELF, &usage))
-   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
+   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_standard.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
   tt.toc();
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, tf_standard, w2_lb, w2_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
@@ -216,16 +227,15 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
     state_type x;
     ss.itox(idx,x);
     /* function returns 1 if cell associated with x is in target set  */
-    if (9 <= (x[0]-s_eta[0]/2.0) && (x[0]+s_eta[0]/2.0) <= 9.5 && 
-        0 <= (x[1]-s_eta[1]/2.0) && (x[1]+s_eta[1]/2.0) <= 0.5)
+    if (2.5 <= (x[0]-s_eta[0]/2.0) && (x[0]+s_eta[0]/2.0) <= 3 && 
+        1.1 <= (x[1]-s_eta[1]/2.0) && (x[1]+s_eta[1]/2.0) <= 1.6)
       return true;
     return false;
   };
    /* write target to file */
   write_to_file(ss,target,"target");
 
- 
-  std::cout << "\nSynthesis: old controller" << std::endl;
+   std::cout << "\nSynthesis: old controller" << std::endl;
   tt.tic();
   scots::WinningDomain win_1=scots::solve_reachability_game(tf_o1d,target);
   tt.toc();

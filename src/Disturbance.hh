@@ -75,11 +75,11 @@ public:
 
     disturbance_marker=true;
     /*get all indices in that region, put ids into a queue*/
-    std::queue<abs_type> id_queue;
-    std::vector<abs_type> lb(ss_dim);  /* lower-left corner */
-    std::vector<abs_type> ub(ss_dim);  /* upper-right corner */
+    //std::queue<abs_type> id_queue;
+    std::vector<abs_type> lb(ss_dim,0);  /* lower-left corner */
+    std::vector<abs_type> ub(ss_dim,0);  /* upper-right corner */
     std::vector<abs_type> no(ss_dim,0);  /* number of cells per dim */
-    std::vector<abs_type> cc(ss_dim);  /* coordinate of current cell in the post */
+    std::vector<abs_type> cc(ss_dim,0);  /* coordinate of current cell in the post */
 
     abs_type nRegion=1;
     for (int i = 0; i < ss_dim; ++i)
@@ -221,9 +221,19 @@ public:
 
 void intersection(state_type x,state_type r, state_type d_lb,state_type d_ub){
   bool tmp=true;
+  for (int k = 0; k < ss_dim; k++)
+  {
+    /* integer coordinate of lower left corner of (x,r) */
+  abs_type lb = static_cast<abs_type>((d_lb[k]-lower_left[k]+m_eta[k]/2.0)/m_eta[k]);
+  /* integer coordinate of upper right corner of (x,r) */
+  abs_type ub = static_cast<abs_type>((d_ub[k]-lower_left[k]+m_eta[k]/2.0)/m_eta[k]);
+  d_lb[k]=m_eta[k] * lb + lower_left[k];
+  d_ub[k]=m_eta[k] * (ub +1) + lower_left[k];
+  }
+  
   for(int i=0; i<ss_dim; i++){
-    if ((x[i]-r[i])>d_ub[i]+m_eta[i]/1e10
-      || d_lb[i]-m_eta[i]/1e10 >(x[i]+r[i]))
+    if ((x[i]-r[i])>d_ub[i]
+      || d_lb[i] >(x[i]+r[i]))
     {
       tmp=false;
       break;
