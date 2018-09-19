@@ -137,12 +137,13 @@ public:
 
   /*given a x, return the related w*/
   template<class F1, class F2>
-    disturbance_type get_disturbance(F1& x, F2& r){
+    disturbance_type get_disturbance(F1& x, F2& r, bool &ig){
         
         /*first check if disturbance update or not, if no, return initial disturbance*/
         if(!disturbance_marker){
           return init_disturbance;
         }
+        
         
         std::vector<abs_type> corner_IDs(2,0);
         for(int k=0; k<ss_dim; k++){
@@ -186,7 +187,10 @@ public:
           /*initialize max_w with the disturbance of first grid piont in this region*/
           disturbance_type max_w;
           max_w=x_disturbance[corner_IDs[0]];
-  
+           if (ig)
+          {
+            std::cout<<"here::"<<max_w[1]<<std::endl;
+          }
           while(i < ss_dim) {
               if (idx[i] < no[i]) {
                   if (i > 0) { //not yet computed the index for all the dimensions
@@ -213,7 +217,7 @@ public:
               }
           }
           pre_max_w = max_w;
-
+          
           return max_w;
         }
   }

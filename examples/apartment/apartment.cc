@@ -117,7 +117,7 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r);
+    disturbance_type w = dis.get_disturbance(x,r,ignore);
     if (ignore)
     {
       std::cout<<"x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" w:"<<w[0]<<" "<<w[1]<<std::endl;
@@ -149,7 +149,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
       r[i] = y[i+state_dim];
     }
 
-    disturbance_type w = dis.get_disturbance(x,r);
+    disturbance_type w = dis.get_disturbance(x,r,ignore);
     if (ignore)
     {
       std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<w[0]<<" "<<w[1]<<std::endl;
