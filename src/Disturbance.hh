@@ -12,6 +12,9 @@
 
 
 namespace scots{
+namespace params {
+  auto avoid_dis = [](const abs_type&) noexcept {return false;};
+}
 
 template<class disturbance_type, class state_type>
 class Disturbance
@@ -68,10 +71,11 @@ public:
   ~Disturbance()=default;
 
   /*BDD subset_X is the region where the disturbance need to change to new_w*/
-  template<class F1, class F2>
+  template<class F1, class F2, class F4=decltype(params::avoid_dis)>
   void update_disturbance(F1& new_disturbance, 
               F2& d_lb, 
-              F2& d_ub){
+              F2& d_ub,
+              F4& avoid=params::avoid_dis){
 
     disturbance_marker=true;
     /*get all indices in that region, put ids into a queue*/
@@ -115,7 +119,8 @@ public:
               cc[l+1]++;
             }
           }
-
+          if(avoid(q))
+            continue;
          x_disturbance[q]=new_disturbance;
     }
     // /*trasfer all ids of subss to change the values in x_disturbance vector */
@@ -136,15 +141,14 @@ public:
   }
 
   /*given a x, return the related w*/
-  template<class F1, class F2>
-    disturbance_type get_disturbance(F1& x, F2& r, bool &ig){
+  template<class F1, class F2, class F4=decltype(params::avoid_dis)>
+    disturbance_type get_disturbance(F1& x, F2& r, bool &ignore, F4& avoid=params::avoid_dis){
         
         /*first check if disturbance update or not, if no, return initial disturbance*/
         if(!disturbance_marker){
           return init_disturbance;
         }
-        
-        
+
         std::vector<abs_type> corner_IDs(2,0);
         for(int k=0; k<ss_dim; k++){
           no[k]=0;
@@ -157,6 +161,7 @@ public:
             if (left <= lower_left[k]-m_eta[k]/2.0 || left>=upper_right[k]+m_eta[k]/2.0 
                 || right >= upper_right[k]+m_eta[k]/2.0 || right <= lower_left[k]-m_eta[k]/2.0){
               out_of_domain = true;
+              return init_disturbance;
               break;
             }
 
@@ -187,9 +192,9 @@ public:
           /*initialize max_w with the disturbance of first grid piont in this region*/
           disturbance_type max_w;
           max_w=x_disturbance[corner_IDs[0]];
-           if (ig)
+          if (ignore)
           {
-            std::cout<<"here::"<<max_w[1]<<std::endl;
+            std::cout<<max_w[0]<<" "<<max_w[1]<<" "<<corner_IDs[0]<<std::endl;
           }
           while(i < ss_dim) {
               if (idx[i] < no[i]) {
@@ -199,6 +204,8 @@ public:
                   } else { //we have all the dimensions except 0, we can look the disturbance up
                       abs_type q = cc[0];
                       for (abs_type j = 0; j < no[0]; j++) {
+                          if(avoid(q))
+                            continue;
                           for(int l=0; l<ss_dim; l++){
                               max_w[l] = std::max(x_disturbance[q][l], max_w[l]);
                           }

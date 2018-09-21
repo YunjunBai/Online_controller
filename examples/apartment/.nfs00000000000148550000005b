@@ -72,15 +72,22 @@ int main() {
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
+  disturbance_type w_1={{0.05, 0.05, 0.05}};
+  disturbance_type w_2={{0.03, 0.1, 0.05}};
+  disturbance_type w2_lb={{4.4,1,-3.5}};
+  disturbance_type w2_ub={{7,3.4,3.5}};
+
+  scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
+
   double H[8][4] = {
     { 4  , 4.2, 0  ,   2 },
-    { 5, 7.6, 1.8  , 2 },
-    { 7.4, 7.6, 0  ,   2 },
-    { 8.4, 10, 1.8  ,   2 },
+    { 4.5, 7.5, 1.8  , 2 },
+    { 7.3, 7.5, 0  ,   2 },
+    { 8, 10, 1.8  ,   2 },
     { 4, 4.2, 3.4  ,  6 },
-    { 5, 7.6  , 3.4  , 3.6},
-    { 7.4, 7.6  , 3.4  , 6 },
-    { 8.4  , 10, 3.4  ,  3.6 }
+    { 4.5, 7.5  , 3.4  , 3.6},
+    { 7.3, 7.5  , 3.4  , 6 },
+    { 8  , 10, 3.4  ,  3.6 }
   };
   /* avoid function returns 1 if x is in avoid set  */
   auto avoid = [&H,ss,s_eta](const abs_type& idx) {
@@ -95,19 +102,14 @@ int main() {
     }
     return false;
   };
- /* write obstacles to file */
+ 
+  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
+  
 
-  disturbance_type w_1={{0.05, 0.05, 0.05}};
-  disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{7.6,0,-3.5}};
-  disturbance_type w2_ub={{10,1.8,3.5}};
-
-  scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
-
-  auto rs_post = [&dis,avoid](ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rs_post = [&dis](ds_type &y, input_type &u, bool &ignore) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis,avoid](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -115,10 +117,10 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore,avoid);
+    disturbance_type w = dis.get_disturbance(x,r);
     if (ignore)
     {
-      std::cout<<"x:"<<x[0]<<" "<<x[1]<<" r:"<<r[0]<<" "<<r[1]<<" w:"<<w[0]<<" "<<w[1]<<std::endl;
+      std::cout<<"x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" w:"<<w[0]<<" "<<w[1]<<std::endl;
     }
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
@@ -135,10 +137,10 @@ int main() {
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour,bool &ignore) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, bool &ignore) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u,bool &ignore) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -147,8 +149,11 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
       r[i] = y[i+state_dim];
     }
 
-    disturbance_type w = dis.get_disturbance(x,r,ignore,avoid);
-    
+    disturbance_type w = dis.get_disturbance(x,r);
+    if (ignore)
+    {
+      std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<w[0]<<" "<<w[1]<<std::endl;
+    }
     dis.intersection(x,r, w2_lb,w2_ub);
     
     //disturbance_type w = {0.05, 0.05, 0.05};
@@ -187,7 +192,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
   //if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
  // std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
-  dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
+  dis.update_disturbance(w_2, w2_lb, w2_ub);
 
    std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
@@ -225,7 +230,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
   scots::WinningDomain win_1=scots::solve_reachability_game(tf_o1d,target);
   tt.toc();
   std::cout << "Winning domain size: " << win_1.get_size() << std::endl;
-  write_to_file(ss,win_1,"winningSet_1");
+
   std::cout << "\nWrite controller to controller_1.scs \n";
   if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_1"))
     std::cout << "Done. \n";

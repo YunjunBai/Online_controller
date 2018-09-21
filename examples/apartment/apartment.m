@@ -10,37 +10,71 @@ close all
 lb=[9 0];
 ub=lb+0.5;
 % initial state
-x0=[0.6 0.6 0];
+x0=[0.8 1.4 0];
 
 
 % load controller from file
-%controller=StaticController('controller');
-
+controller=StaticController('controller');
 % simulate closed loop system
-% y=x0;
-% v=[];
-% loop=3000;
-% 
-% % tau
-% tau=0.3;
-% 
-% while(loop>0)
-%     loop=loop-1;
-%   
-%   if (lb(1) <= y(end,1) & y(end,1) <= ub(1) &&...
-%       lb(2) <= y(end,2) & y(end,2) <= ub(2))
-%     break;
-%   end 
-% 
-%   u=controller.control(y(end,:));
-%   v=[v; u];
-% 
-%   [t x]=ode45(@unicycle_ode,[0 tau], y(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
-%   
-%   y=[y; x(end,:)];
-% 
-% end
+y=x0;
+v=[];
+loop=3000;
 
+%tau
+tau=0.3;
+
+while(loop>0)
+    loop=loop-1;
+  
+  if (lb(1) <= y(end,1) & y(end,1) <= ub(1) &&...
+      lb(2) <= y(end,2) & y(end,2) <= ub(2))
+    break;
+  end 
+
+  u=controller.control(y(end,:));
+  v=[v; u];
+    
+  [t x]=ode45(@unicycle_ode,[0 tau], y(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
+  
+  y=[y; x(end,:)];
+
+end
+
+%% simulation
+
+% target set
+lb=[9 0];
+ub=lb+0.5;
+% initial state
+x0=[0.8 1.4 0];
+
+
+% load controller from file
+controller=StaticController('controller_1');
+% simulate closed loop system
+y_1=x0;
+v=[];
+loop=3000;
+
+%tau
+tau=0.3;
+
+while(loop>0)
+    loop=loop-1;
+  
+  if (lb(1) <= y_1(end,1) & y_1(end,1) <= ub(1) &&...
+      lb(2) <= y_1(end,2) & y_1(end,2) <= ub(2))
+    break;
+  end 
+
+  u=controller.control(y_1(end,:));
+  v=[v; u];
+    
+  [t x]=ode45(@unicycle_ode,[0 tau], y_1(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
+  
+  y_1=[y_1; x(end,:)];
+
+end
 %% plot the vehicle domain
 % colors
 colors=get(groot,'DefaultAxesColorOrder');
@@ -69,8 +103,10 @@ hold on
 plot_domain
 
 % plot initial state  and trajectory
-%plot(y(:,1),y(:,2),'k.-')
-%plot(y(1,1),y(1,2),'.','color',colors(5,:),'markersize',20)
+plot(y(:,1),y(:,2),'k.-','color',colors(1,:))
+plot(y(1,1),y(1,2),'.','color',colors(5,:),'markersize',20)
+plot(y_1(:,1),y_1(:,2),'k.-','color',colors(4,:))
+plot(y_1(1,1),y_1(1,2),'.','color',colors(5,:),'markersize',20)
 
 box on
 axis([0 10 0 6])
@@ -100,7 +136,7 @@ colors=get(groot,'DefaultAxesColorOrder');
 
 alpha=0.2;
 
-v=[4.4 1;7 1; 4.4 3.3; 7 3.3];
+v=[7.6 0;10 0; 7.6 1.8; 10 1.8];
 patch('vertices',v,'faces',[1 2 4 3],'facea', alpha, 'edgec',colors(2,:));
 
 
@@ -110,19 +146,19 @@ patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(2,:),'edgec',c
 
 v=[4.0     0  ;4.2  0 ; 4.0  2 ; 4.2  2  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[4.7     1.8;7.5  1.8   ; 4.7   2.0    ; 7.5 2.0   ];
+v=[5     1.8;7.6  1.8   ; 5   2.0    ; 7.6 2.0   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 v=[4.0 3.4; 4.2 3.4; 4.0 6; 4.2 6];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[4.7 3.4; 7.5 3.4; 4.7 3.6; 7.5 3.6];
+v=[5 3.4; 7.6 3.4; 5 3.6; 7.6 3.6];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[7.3   0  ;7.5  0   ; 7.3   2.0   ; 7.5 2.0  ];
+v=[7.4   0  ;7.6  0   ; 7.4   2.0   ; 7.6 2.0  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[7.3   3.4  ;7.5  3.4   ; 7.3   6.0    ; 7.5  6.0   ];
+v=[7.4   3.4  ;7.6  3.4   ; 7.4   6.0    ; 7.6  6.0   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[8.3   1.8  ;10.0  1.8   ;8.3   2.0   ; 10.0  2.0  ];
+v=[8.4  1.8  ;10.0  1.8   ;8.4  2.0   ; 10.0  2.0  ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
-v=[8.3   3.4  ;10.0    3.4   ; 8.3   3.6    ; 10.0   3.6   ];
+v=[8.4   3.4  ;10.0    3.4   ; 8.4   3.6    ; 10.0   3.6   ];
 patch('vertices',v,'faces',[1 2 4 3],'facea',alpha,'facec',colors(1,:),'edgec',colors(1,:));
 
 

@@ -214,20 +214,18 @@ public:
           y[k]=x[k];
           y[k+dim]=r[k];
         }
-       
+        
         /* current input */
         m_input_alphabet.itox(j,u);
         /* integrate system and radius growth bound */
         /* the result is stored in x and r */
         bool ignore=false;
-        if (i==12058 && j==27)
+        if (i==2284)
         {
-          ignore=true;
-          std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<u[0]<<" "<<u[1]<<std::endl;
+          std::cout<<x[0]<<" "<<x[1]<<x[2]<<std::endl;
         }
         rs_post(y,u,ignore);
-        //if(ignore==true)
-        //  continue;
+        
         for (int k = 0; k<dim; ++k)
         {
           x[k]=y[k];
@@ -697,12 +695,8 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           /* integrate system and radius growth bound */
           /* the result is stored in x and r */
           bool intersection_with_region = false;
-         bool ignore=false;
-        if (q==12058 && j==27)
-        {
-          ignore=true;
-          std::cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<u[0]<<" "<<u[1]<<std::endl;
-        }
+          bool ignore=false;
+
           rs_repost(y,u,intersection_with_region,ignore); //todo
           //if(ignore==true)
           //  continue;
@@ -871,7 +865,11 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       for(abs_type i=0; i<N; i++) {
         for(abs_type j=0; j<M; j++) {
           sum+=new_transition.m_no_pre[i*M+j];
-          new_transition.m_pre_ptr[i*M+j]=sum;     
+          new_transition.m_pre_ptr[i*M+j]=sum; 
+          // if (new_transition.m_no_post[i*M+j]!=standard_transition.m_no_post[i*M+j])
+          //     {
+          //       std::cout<<i<<" "<<j<<recomputed_mark[i*M+j]<<std::endl;
+          //     }    
         }
       }
         

@@ -1,16 +1,14 @@
 /*
- * aircraft.cc
+ * quadcopter.cc
  *
- *  created: Oct 2016
- *  author: Matthias Rungger
+ *  created: Sep 2018
+ *  author: Yunjun
  *
  */
 
 /*
  * information about this example is given in
- * http://arxiv.org/abs/1503.03715
- * doi: 10.1109/TAC.2016.2593947
- * doi: 10.1109/CDC.2015.7403185
+ * http://charlestytler.com/quadcopter-equations-motion/
  *
  */
 
@@ -30,9 +28,9 @@
 struct rusage usage;
 
 /* state space dim */
-const int state_dim=3;
+const int state_dim=6;
 /* input space dim */
-const int input_dim=2;
+const int input_dim=6;
 /* sampling time */
 const double tau = 0.25;
 using abs_type = scots::abs_type;
@@ -85,7 +83,7 @@ int main() {
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
   auto rs_post = [&dis](ds_type &y, input_type &u, bool &ignore) -> void {
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs_1 =[&dis](ds_type &yyy, const ds_type &y, input_type &u, bool &ignore) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -95,25 +93,23 @@ int main() {
     }
     disturbance_type w = dis.get_disturbance(x,r,ignore);
 
-    double mg = 60000.0*9.81;
-    double mi = 1.0/60000;
-    double c=(1.25+4.2*u[1]);
-    double L[3][2];
-    L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
-    L[0][1]=9.81;
-    L[1][0]=0.002933+0.004802*u[1];
-    L[1][1]=0.003623;
-    L[2][0]=0.07483;
-    L[2][1]=83.22;
-    yy[0] = mi*(u[0]*std::cos(u[1])-(2.7+3.08*c*c)*y[0]*y[0]-mg*std::sin(y[1]));
-    yy[1] = (1.0/(60000*y[0]))*(u[0]*std::sin(u[1])+68.6*c*y[0]*y[0]-mg*std::cos(y[1]));
-    yy[2] = y[0]*std::sin(y[1]);
+    
+    yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
+    yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
+    yy[2] = -std::sin(y[4])*u[0]+std::sin(y[3])*std::cos(y[4])*u[1]+std::cos(y[3])*std::cos(y[4])*u[2];
+    yy[3] = u[3] +(u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::tan(y[4]);
+    yy[4] = u[4]*std::cos(y[3])-u[5]*std::sin(y[3]);
+    yy[5] = (u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::asin(y[4]);
+
     /* to account for input disturbances */
-    yy[3] = L[0][0]*y[3]+L[0][1]*y[4]+w[0]; /* L[0][2]=0 */
-    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+w[1]; /* L[1][2]=0 */
-    yy[5] = L[2][0]*y[3]+L[2][1]*y[4]+w[2]; /* L[2][2]=0 */
+    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; /* L[0][2]=0 */
+    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; /* L[1][2]=0 */
+    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2]; /* L[2][2]=0 */
+    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+L[3][5]*y[11]+w[3];
+    yy[10]= L[4][3]*y[9]+w[4];
+    yy[11]= L[5][3]*y[9]+L[5][4]*y[10]+w[5];
   };
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs_1,y,u,ignore,2*state_dim,tau,10);
 };
 
 auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, bool &ignore) -> void {
@@ -130,24 +126,36 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
     disturbance_type w = dis.get_disturbance(x,r,ignore);
    
     dis.intersection(x,r, w2_lb,w2_ub);
-    
-    double mg = 60000.0*9.81;
-    double mi = 1.0/60000;
-    double c=(1.25+4.2*u[1]);
-     double L[3][2];
-    L[0][0]=-0.00191867*(2.7+3.08*(1.25+4.2*u[1])*(1.25+4.2*u[1]));
-    L[0][1]=9.81;
-    L[1][0]=0.002933+0.004802*u[1];
-    L[1][1]=0.003623;
-    L[2][0]=0.07483;
-    L[2][1]=83.22;
-    yy[0] = mi*(u[0]*std::cos(u[1])-(2.7+3.08*c*c)*y[0]*y[0]-mg*std::sin(y[1]));
-    yy[1] = (1.0/(60000*y[0]))*(u[0]*std::sin(u[1])+68.6*c*y[0]*y[0]-mg*std::cos(y[1]));
-    yy[2] = y[0]*std::sin(y[1]);
+    double L[5][5];
+    L[0][3] = ;
+    L[0][4] = ;
+    L[0][5]
+    L[1][3]
+    L[1][4]
+    L[1][5]
+    L[2][3]
+    L[2][4]
+    L[3][3]
+    L[3][4]
+    L[3][5]
+    L[4][3]
+    L[5][3]
+    L[5][4]
+
+    yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
+    yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
+    yy[2] = -std::sin(y[4])*u[0]+std::sin(y[3])*std::cos(y[4])*u[1]+std::cos(y[3])*std::cos(y[4])*u[2];
+    yy[3] = u[3] +(u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::tan(y[4]);
+    yy[4] = u[4]*std::cos(y[3])-u[5]*std::sin(y[3]);
+    yy[5] = (u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::asin(y[4]);
+
     /* to account for input disturbances */
-    yy[3] = L[0][0]*y[3]+L[0][1]*y[4]+w[0]; /* L[0][2]=0 */
-    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+w[1]; /* L[1][2]=0 */
-    yy[5] = L[2][0]*y[3]+L[2][1]*y[4]+w[2]; /* L[2][2]=0 */
+    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; /* L[0][2]=0 */
+    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; /* L[1][2]=0 */
+    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2]; /* L[2][2]=0 */
+    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+L[3][5]*y[11]+w[3];
+    yy[10]= L[4][3]*y[9]+w[4];
+    yy[11]= L[5][3]*y[9]+L[5][4]*y[10]+w[5];
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
