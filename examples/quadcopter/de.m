@@ -58,19 +58,22 @@
 % f=(tan(x(2))^2 +1)*sin(x(1));
 % f=cos(x(1));
 % f=sin(x(1));
+% f=cos(x(1))/cos(x(2))
+%f=sin(x(1))/cos(x(2))
+%f=sin(x(2))*cos(x(1))/(cos(x(2))*cos(x(2)))
 
 
 
-
-
-ub=[30,30,30];
-lb=[-30,-30,-30];
-x0=[-30,-30,-30];
+ub=[60,60,60];
+lb=[-20,-20,-20];
+x0=[-20,-20,-20];
 [x1,mf]=fmincon(@func,x0,[],[],[],[],lb,ub);
 max=-mf
 
+x1
+
 
 function f=func(x)
-f=sin(x(1))*sin(x(3))+cos(x(1))*cos(x(3))*sin(x(2));
+f=-(sin(x(2))*sin(x(1))/(cos(x(2))*cos(x(2))));
 end
 

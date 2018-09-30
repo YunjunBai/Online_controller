@@ -322,11 +322,11 @@ public:
       vector.resize(size);
       for(size_t index = 0; index < size; index++) {
         if(std::getline(m_file,m_line)) {
-          // if(m_line.find(SCOTS_FH_SYMBOL)!=std::string::npos) {
-          //   vector.clear();
-          //   std::cout<<"here1"<<std::endl;
-          //   return 0;
-          // }
+          if(m_line.find(SCOTS_FH_SYMBOL)!=std::string::npos) {
+            vector.clear();
+            std::cout<<"here1"<<std::endl;
+            return 0;
+          }
           counter++;
           std::istringstream stream(m_line);
           stream >> vector[index];

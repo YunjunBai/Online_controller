@@ -142,7 +142,7 @@ public:
 
   /*given a x, return the related w*/
   template<class F1, class F2, class F4=decltype(params::avoid_dis)>
-    disturbance_type get_disturbance(F1& x, F2& r, bool &ignore, F4& avoid=params::avoid_dis){
+    disturbance_type get_disturbance(F1& x, F2& r, F4& avoid=params::avoid_dis){
         
         /*first check if disturbance update or not, if no, return initial disturbance*/
         if(!disturbance_marker){
@@ -192,10 +192,7 @@ public:
           /*initialize max_w with the disturbance of first grid piont in this region*/
           disturbance_type max_w;
           max_w=x_disturbance[corner_IDs[0]];
-          if (ignore)
-          {
-            std::cout<<max_w[0]<<" "<<max_w[1]<<" "<<corner_IDs[0]<<std::endl;
-          }
+          
           while(i < ss_dim) {
               if (idx[i] < no[i]) {
                   if (i > 0) { //not yet computed the index for all the dimensions
@@ -229,11 +226,15 @@ public:
         }
   }
   
-
-void intersection(state_type x,state_type r, state_type d_lb,state_type d_ub){
+template<class ds_type>
+void intersection(ds_type y, state_type d_lb,state_type d_ub){
   bool tmp=true;
+  state_type x;
+  state_type r;
   for (int k = 0; k < ss_dim; k++)
   {
+    x[k]=y[k];
+    r[k]=y[k+ss_dim];
     /* integer coordinate of lower left corner of (x,r) */
   abs_type lb = static_cast<abs_type>((d_lb[k]-lower_left[k]+m_eta[k]/2.0)/m_eta[k]);
   /* integer coordinate of upper right corner of (x,r) */

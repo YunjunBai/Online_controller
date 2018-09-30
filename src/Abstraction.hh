@@ -219,12 +219,9 @@ public:
         m_input_alphabet.itox(j,u);
         /* integrate system and radius growth bound */
         /* the result is stored in x and r */
-        bool ignore=false;
-        if (i==2284)
-        {
-          std::cout<<x[0]<<" "<<x[1]<<x[2]<<std::endl;
-        }
-        rs_post(y,u,ignore);
+ 
+      
+        rs_post(y,u);
         
         for (int k = 0; k<dim; ++k)
         {
@@ -524,8 +521,7 @@ public:
 /*recompute transition locally*/
 template<class F2, class F3, class F4=decltype(params::avoid_abs)>
   void recompute_gb(TransitionFunction& new_transition,
-                    const TransitionFunction& old_transition,
-                    const TransitionFunction& standard_transition,       
+                    const TransitionFunction& old_transition, 
                     F2& d_lb,
                     F2& d_ub,
                     F3& rs_repost,
@@ -695,9 +691,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           /* integrate system and radius growth bound */
           /* the result is stored in x and r */
           bool intersection_with_region = false;
-          bool ignore=false;
-
-          rs_repost(y,u,intersection_with_region,ignore); //todo
+          rs_repost(y,u,intersection_with_region); //todo
           //if(ignore==true)
           //  continue;
           /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
@@ -796,7 +790,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           //   if(new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])
           //     std::cout<<"error"<<i<<std::endl;
           // }
-          new_transition.out_of_domain[i*M+j]=standard_transition.out_of_domain[i*M+j];
+          //new_transition.out_of_domain[i*M+j]=standard_transition.out_of_domain[i*M+j];
           if(!recomputed_mark[i*M+j]){
             new_transition.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
             T+=new_transition.m_no_post[i*M+j];

@@ -50,40 +50,40 @@ int main() {
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* grid node distance diameter */
   /* optimized values computed according to doi: 10.1109/CDC.2015.7403185 */
-  state_type s_eta={{25.0/362,3*M_PI/180/66,56.0/334}}; 
+  state_type s_eta={{1,1,1,20*M_PI/180,20*M_PI/180,20*M_PI/180}}; 
   /* lower bounds of the hyper rectangle */
-  state_type s_lb={{58,-3*M_PI/180,0}};
+  state_type s_lb={{0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{70,0,55}}; 
+  state_type s_ub={{5,5,5,60*M_PI/180,60*M_PI/180,60*M_PI/180}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
 
   /* construct grid for the input space */
   /* lower bounds of the hyper rectangle */
-  input_type i_lb={{0,0}};
+  input_type i_lb={{0,0,0,0,0,0}};
   /* upper bounds of the hyper rectangle */
-  input_type i_ub={{32000,8*M_PI/180}};
+  input_type i_ub={{0.5,0.5,0.5,8*M_PI/180,8*M_PI/180,8*M_PI/180}};
   /* grid node distance diameter */
-  input_type i_eta={{32000,9.0/8.0*M_PI/180}};
+  input_type i_eta={{.25,.25,.25, 2*M_PI/180, 2*M_PI/180, 2*M_PI/180}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
   /* setup object to compute the transition function */
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   /* measurement disturbances  */
-  state_type z={{0.0125,0.0025/180*M_PI,0.05}};
+  state_type z={{0.05,0.05,0.05,0.0025/180*M_PI,0.0025/180*M_PI,0.0025/180*M_PI}};
   abs.set_measurement_error_bound(z);
 
-  disturbance_type w_1={.108,0.002,0};
-  disturbance_type w_2={0.203, 0.001, 0.001};
-  disturbance_type w2_lb={58,-3*M_PI/180,0};
-  disturbance_type w2_ub={70,0,4};
+  disturbance_type w_1={.108,0.002,0,0,0,0};
+  disturbance_type w_2={0.203, 0.001, 0.001,0,0,0};
+  disturbance_type w2_lb={0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180};
+  disturbance_type w2_ub={3,3,3,60*M_PI/180,60*M_PI/180,60*M_PI/180};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis](ds_type &y, input_type &u, bool &ignore) -> void {
-  auto rhs_1 =[&dis](ds_type &yyy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rs_post = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u) -> void {
+  auto rhs_1 =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -91,8 +91,21 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore);
-
+    disturbance_type w = dis.get_disturbance(x,r);
+    double L[6][6];
+    L[0][3]=u[1]+u[2];
+    L[0][4]=u[2]+0.9129*u[0]+u[1];
+    L[0][5]=u[2]+0.5944*u[1]+0.1665*u[0];
+    L[1][3]=u[1]+u[2];
+    L[1][4]=u[2]+8.0165e-15*u[0]+0.8335*u[1];
+    L[1][5]=1.0409*u[2]+0.9860*u[1]+u[0];
+    L[2][3]=u[1]+0.9129*u[2];
+    L[2][4]=u[0]+u[2]+u[1]*0.8335;
+    L[3][3]=(3.3723e+11) * u[4] +(9.6712e+08)*u[5];
+    L[3][4]=6.0049*u[5]+u[4]*(4.7596e+13);
+    L[4][3]=u[4]+u[5];
+    L[5][3]=2.4505*u[4]+2.2372*u[5];
+    L[5][4]=u[4]*5.0049+u[5]*(8.5318+14);
     
     yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
     yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
@@ -102,20 +115,20 @@ int main() {
     yy[5] = (u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::asin(y[4]);
 
     /* to account for input disturbances */
-    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; /* L[0][2]=0 */
-    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; /* L[1][2]=0 */
-    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2]; /* L[2][2]=0 */
-    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+L[3][5]*y[11]+w[3];
+    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; 
+    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; 
+    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2]; 
+    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+w[3];
     yy[10]= L[4][3]*y[9]+w[4];
     yy[11]= L[5][3]*y[9]+L[5][4]*y[10]+w[5];
   };
-  scots::runge_kutta_fixed4(rhs_1,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs_1,y,u,dis, w2_lb,w2_ub,2*state_dim,tau,10);
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, bool &ignore) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -123,24 +136,22 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore);
+    disturbance_type w = dis.get_disturbance(x,r);
    
-    dis.intersection(x,r, w2_lb,w2_ub);
-    double L[5][5];
-    L[0][3] = ;
-    L[0][4] = ;
-    L[0][5]
-    L[1][3]
-    L[1][4]
-    L[1][5]
-    L[2][3]
-    L[2][4]
-    L[3][3]
-    L[3][4]
-    L[3][5]
-    L[4][3]
-    L[5][3]
-    L[5][4]
+    double L[6][6];
+    L[0][3]=u[1]+u[2];
+    L[0][4]=u[2]+0.9129*u[0]+u[1];
+    L[0][5]=u[2]+0.5944*u[1]+0.1665*u[0];
+    L[1][3]=u[1]+u[2];
+    L[1][4]=u[2]+8.0165e-15*u[0]+0.8335*u[1];
+    L[1][5]=1.0409*u[2]+0.9860*u[1]+u[0];
+    L[2][3]=u[1]+0.9129*u[2];
+    L[2][4]=u[0]+u[2]+u[1]*0.8335;
+    L[3][3]=(3.3723e+11) * u[4] +(9.6712e+08)*u[5];
+    L[3][4]=6.0049*u[5]+u[4]*(4.7596e+13);
+    L[4][3]=u[4]+u[5];
+    L[5][3]=2.4505*u[4]+2.2372*u[5];
+    L[5][4]=u[4]*5.0049+u[5]*(8.5318+14);
 
     yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
     yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
@@ -150,16 +161,16 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
     yy[5] = (u[4]*std::sin(y[3])+u[5]*std::cos(y[3]))*std::asin(y[4]);
 
     /* to account for input disturbances */
-    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; /* L[0][2]=0 */
-    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; /* L[1][2]=0 */
-    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2]; /* L[2][2]=0 */
-    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+L[3][5]*y[11]+w[3];
+    yy[6] = L[0][3]*y[9]+L[0][4]*y[10]+L[0][5]*y[11]+w[0]; 
+    yy[7] = L[1][3]*y[9]+L[1][4]*y[10]+L[1][5]*y[11]+w[1]; 
+    yy[8] = L[2][3]*y[9]+L[2][4]*y[10]+w[2];
+    yy[9] = L[3][3]*y[9]+L[3][4]*y[10]+w[3];
     yy[10]= L[4][3]*y[9]+w[4];
     yy[11]= L[5][3]*y[9]+L[5][4]*y[10]+w[5];
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,dis, w2_lb,w2_ub,2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;
@@ -195,7 +206,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_old, tf_standard, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_old, w2_lb, w2_ub, rs_repost);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();
@@ -208,8 +219,8 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
   // tt.toc();
   /* define target set */
   auto target = [&s_eta, &z, &ss](const scots::abs_type& abs_state) {
-    state_type t_lb = {{63,-3*M_PI/180,0}};
-    state_type t_ub = {{75,0,2.5}};
+    state_type t_lb = {{0,0,0,-3*M_PI/180,-3*M_PI/180,-3*M_PI/180}};
+    state_type t_ub = {{5,5,2.5,0,0,0}};
     state_type c_lb;
     state_type c_ub;
     /* center of cell associated with abs_state is stored in x */
@@ -222,10 +233,13 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
     }
     if( t_lb[0]<=c_lb[0] && c_ub[0]<=t_ub[0] &&
         t_lb[1]<=c_lb[1] && c_ub[1]<=t_ub[1] &&
-        t_lb[2]<=c_lb[2] && c_ub[2]<=t_ub[2]) {
-      if(-0.91<=(x[0]*std::sin(x[1])-s_eta[0]/2.0-z[0]-(c_ub[0])*(s_eta[1]/2.0-z[1]))) {
+        t_lb[2]<=c_lb[2] && c_ub[2]<=t_ub[2] &&
+        t_lb[3]<=c_lb[3] && c_ub[3]<=t_ub[3] &&
+        t_lb[4]<=c_lb[4] && c_ub[4]<=t_ub[4] &&
+        t_lb[5]<=c_lb[5] && c_ub[5]<=t_ub[5]) {
+      
         return true;
-      }
+      
     }
     return false;
   };

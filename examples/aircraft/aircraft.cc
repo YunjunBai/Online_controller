@@ -84,8 +84,8 @@ int main() {
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis](ds_type &y, input_type &u, bool &ignore) -> void {
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rs_post = [&dis](ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -93,7 +93,7 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore);
+    disturbance_type w = dis.get_disturbance(x,r);
 
     double mg = 60000.0*9.81;
     double mi = 1.0/60000;
@@ -113,13 +113,13 @@ int main() {
     yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+w[1]; /* L[1][2]=0 */
     yy[5] = L[2][0]*y[3]+L[2][1]*y[4]+w[2]; /* L[2][2]=0 */
   };
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, bool &ignore) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -127,7 +127,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore);
+    disturbance_type w = dis.get_disturbance(x,r);
    
     dis.intersection(x,r, w2_lb,w2_ub);
     
@@ -151,7 +151,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour, b
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;

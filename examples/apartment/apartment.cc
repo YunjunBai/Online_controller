@@ -47,7 +47,7 @@ using ds_type = std::array<double, 2*state_dim>;
 using abs_type = scots::abs_type;
 
 
-int main() {
+void main_parameters(const int p1){ 
   /* to measure time */
   TicToc tt;
 
@@ -100,14 +100,14 @@ int main() {
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{7.6,0,-3.5}};
-  disturbance_type w2_ub={{10,1.8,3.5}};
-
+  disturbance_type w2_lb={{8.6-p1*s_eta[0],0,-3.5}};
+  disturbance_type w2_ub={{10+p1*s_eta[0],1.2+p1*s_eta[1],3.5}};
+  double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis,avoid](ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rs_post = [&dis,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis,avoid](ds_type &yy, const ds_type &y, input_type &u, bool &ignore) -> void {
+  auto rhs =[&dis,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -115,11 +115,8 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,ignore,avoid);
-    if (ignore)
-    {
-      std::cout<<"x:"<<x[0]<<" "<<x[1]<<" r:"<<r[0]<<" "<<r[1]<<" w:"<<w[0]<<" "<<w[1]<<std::endl;
-    }
+    disturbance_type w = dis.get_disturbance(x,r,avoid);
+   
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
@@ -131,14 +128,14 @@ int main() {
     yy[5] = 0;
   };
   //while(ignore==false){
-    scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+    scots::runge_kutta_fixed4(rhs,y,u,dis, w2_lb,w2_ub, 2*state_dim,tau,10);
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour,bool &ignore) -> void {
+auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u,bool &ignore) -> void {
+  auto rhs =[&dis,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -147,10 +144,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
       r[i] = y[i+state_dim];
     }
 
-    disturbance_type w = dis.get_disturbance(x,r,ignore,avoid);
-    
-    dis.intersection(x,r, w2_lb,w2_ub);
-    
+    disturbance_type w = dis.get_disturbance(x,r,avoid); 
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
@@ -164,7 +158,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,ignore,2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,dis,w2_lb,w2_ub, 2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;
@@ -196,15 +190,15 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
  if(!getrusage(RUSAGE_SELF, &usage))
    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
-  tt.toc();
+  double t2= tt.toc();
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
-  tt.toc();
+  double t1=tt.toc();
 
   /* define target set */
   auto target = [&ss,&s_eta](const abs_type& idx) {
@@ -225,7 +219,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
   scots::WinningDomain win_1=scots::solve_reachability_game(tf_o1d,target);
   tt.toc();
   std::cout << "Winning domain size: " << win_1.get_size() << std::endl;
-  write_to_file(ss,win_1,"winningSet_1");
+  
   std::cout << "\nWrite controller to controller_1.scs \n";
   if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_1"))
     std::cout << "Done. \n";
@@ -241,8 +235,12 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
     std::cout << "Done. \n";
 
 
- 
- 
+    std::ofstream write;
+    std::ifstream read;
+    write.open("result.txt", std::ios::app);          
+    write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
+    write.close();
+    read.close();
 
   // tt.tic();
   // std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);
@@ -265,5 +263,15 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
  // if(write_to_file(scots::StaticController(ss,is,std::move(win_static)),"controller_w2"))
   //  std::cout << "Done. \n";
   
+  
+}
+int  main()
+{
+ 
+  for (int k = 0; k < 25; ++k)
+  {
+    
+      main_parameters(k);
+  }
   return 1;
 }

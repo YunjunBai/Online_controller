@@ -27,29 +27,30 @@ namespace scots {
  * @param nint - number of intermediate steps (default = 10)
  * @return the solution of IVP at time tau \f$ \xi(\tau) \f$ stored in x
  **/
-template<class RHS, class ds_type, class input_type>
-void runge_kutta_fixed4(RHS rhs, ds_type &x, input_type &u, bool &ig,const int dim, const double tau, const int nint=10) noexcept {
+template<class RHS, class ds_type, class input_type,class F1, class state_type>
+void runge_kutta_fixed4(RHS rhs, ds_type &x, input_type &u, F1 &dis, state_type & w2_lb, state_type & w2_ub, const int dim, const double tau, const int nint=10) noexcept {
   ds_type k[4];
   ds_type tmp;
 
   double h=tau/(double)nint;
 
   for(int t=0; t<nint; t++) {
-    rhs(k[0],x,u,ig);
+    rhs(k[0],x,u);
     for(int i=0;i<dim;i++)
       tmp[i]=x[i]+h/2*k[0][i];
 
-    rhs(k[1],tmp, u,ig);
+    rhs(k[1],tmp, u);
     for(int i=0;i<dim;i++)
       tmp[i]=x[i]+h/2*k[1][i];
 
-    rhs(k[2],tmp, u,ig);
+    rhs(k[2],tmp, u);
     for(int i=0;i<dim;i++)
       tmp[i]=x[i]+h*k[2][i];
 
-    rhs(k[3],tmp, u,ig);
+    rhs(k[3],tmp, u);
     for(int i=0; i<dim; i++)
       x[i] = x[i] + (h/6)*(k[0][i] + 2*k[1][i] + 2*k[2][i] + k[3][i]);
+    dis.intersection(x,w2_lb,w2_ub);
   }
 }
 
