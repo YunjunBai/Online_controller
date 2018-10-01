@@ -18,6 +18,8 @@
 #include "scots.hh"
 /* ode solver */
 #include "RungeKutta4.hh"
+#include "Simpson3.hh"
+#include "MatrixExp.hh"
 
 /* time profiling */
 #include "TicToc.hh"
@@ -95,6 +97,8 @@ void main_parameters(const int p1){
     }
     return false;
   };
+
+
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
 
@@ -105,17 +109,33 @@ void main_parameters(const int p1){
   double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
+  auto l_matrix=[](const input_type &u){
+    double l[3][3];
+    for (int i = 0; i < state_dim; ++i)
+      for (int j = 0; j < state_dim; ++j)
+        if ((i==0&&j==2) ||(i==1&&j==2))
+          l[i][j]=std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
+        else
+          l[i][j]=0;  
+    return l;
+  };
+
+  scots::GbEstimation<disturbance_type> ge(ss, is,w_1,w_2);
+  ge.exp_interals(l_matrix,tau/10);
+
+  auto rs_post = [&dis,&ge,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
   auto rhs =[&dis,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r,avoid);
+    r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es,avoid);
    
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
