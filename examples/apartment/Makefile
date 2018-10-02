@@ -1,7 +1,7 @@
 #
 # compiler
 #
-CC        = g++
+CC        = g++ 
 #CC       	  = clang++
 CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
 #CXXDEBUG		= -Wall -Wextra -std=c++11 
@@ -11,6 +11,9 @@ CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
 SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
+
+Eigen            = -I/opt/local
+
 .PHONY: apartment
 
 TARGET = apartment
@@ -18,10 +21,11 @@ TARGET = apartment
 all: $(TARGET)
 
 apartment: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) apartment.cc -o apartment
+	$(CC) $(CXXFLAGS) $(SCOTSINC) $(Eigen) apartment.cc -o apartment
 
 #simulate: 
 #	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
 	rm apartment
+

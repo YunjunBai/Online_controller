@@ -673,7 +673,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       }
       /* loop over all inputs */
       for(abs_type j=0; j<M; j++){
-        new_transition.out_of_domain[q*M+j]=false;
+        //new_transition.out_of_domain[q*M+j]=false;
         if(input_todo[q*M+j]){
           input_todo[q*M+j]=false;
           /* get center x of cell */
@@ -791,9 +791,9 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           //   if(new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])
           //     std::cout<<"error"<<i<<std::endl;
           // }
-          new_transition.out_of_domain[i*M+j]=standard_transition.out_of_domain[i*M+j];
+          //new_transition.out_of_domain[i*M+j]=standard_transition.out_of_domain[i*M+j];
           if(!recomputed_mark[i*M+j]){
-            //new_transition.out_of_domain[i*M+j]=old_transition.out_of_domain[i*M+j];
+            new_transition.out_of_domain[i*M+j]=old_transition.out_of_domain[i*M+j];
             new_transition.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
             T+=new_transition.m_no_post[i*M+j];
             new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];

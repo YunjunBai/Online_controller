@@ -112,10 +112,10 @@ WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
         /* update the number of processed posts */
         K[i*M+j]--;
         /* update the max value of processed posts */
-        edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]);
+        edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]); 
         /* check if for node i and input j all posts are processed */
-        if(!K[i*M+j] && value[i]>edge_val[i*M+j]) {
-          fifo.push(i);
+        if((!K[i*M+j] && value[i]>edge_val[i*M+j])|| (value[i]==0 &&value[j]==0) ) {
+          fifo.push(i);         
           value[i]=edge_val[i*M+j]; 
           win_domain[i]=j;
         }

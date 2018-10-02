@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <array>
-
+#include <unsupported/Eigen/MatrixFunctions>
 /* SCOTS header */
 #include "scots.hh"
 /* ode solver */
@@ -21,13 +21,14 @@
 #include "Simpson3.hh"
 #include "MatrixExp.hh"
 
+
 /* time profiling */
 #include "TicToc.hh"
 /* memory profiling */
 #include <sys/time.h>
 #include <sys/resource.h>
 struct rusage usage;
-
+using namespace Eigen;
 /* state space dim */
 const int state_dim=3;
 /* input space dim */
@@ -44,7 +45,7 @@ using state_type = std::array<double,state_dim>;
 using disturbance_type = std::array<double, state_dim>;
 using input_type = std::array<double,input_dim>;
 using ds_type = std::array<double, 2*state_dim>;
-
+using matrix_type = std::array<std::array<double,state_dim>,state_dim>;
 /* abbrev of the type for abstract states and inputs */
 using abs_type = scots::abs_type;
 
@@ -109,8 +110,10 @@ void main_parameters(const int p1){
   double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto l_matrix=[](const input_type &u){
-    double l[3][3];
+  auto l_matrix=[&is](const abs_type& input_id){
+    matrix_type l;
+    input_type u;
+    is.itox(input_id,u);
     for (int i = 0; i < state_dim; ++i)
       for (int j = 0; j < state_dim; ++j)
         if ((i==0&&j==2) ||(i==1&&j==2))
@@ -120,12 +123,12 @@ void main_parameters(const int p1){
     return l;
   };
 
-  scots::GbEstimation<disturbance_type> ge(ss, is,w_1,w_2);
+  scots::GbEstimation<disturbance_type,matrix_type> ge(ss, is,w_1,w_2);
   ge.exp_interals(l_matrix,tau/10);
 
   auto rs_post = [&dis,&ge,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -152,19 +155,20 @@ void main_parameters(const int p1){
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-
-    disturbance_type w = dis.get_disturbance(x,r,avoid); 
+    r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es,avoid); 
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
@@ -214,7 +218,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigb
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
