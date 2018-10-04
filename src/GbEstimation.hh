@@ -36,18 +36,17 @@ public:
 		}
 		l_exp.resize(M);
 	}
-	~GbEstimation();
+	~GbEstimation()=default;
 
 	
 	template<class F>
 	void exp_interals(F& l_matrix, const double t){
-		const abs_type M_=M;
 		int ss_dim_=ss_dim;
 		disturbance_type w_max_=w_max;
 
-		auto f=[M_,ss_dim_,w_max_,t,l_matrix](const double x,  abs_type input_id){
+		auto f=[ss_dim_,w_max_,t,l_matrix](const double x,  abs_type input_id){
 			matrix_type le;
-			scots::matrixExp(l_matrix, le, M_, input_id, t-x, ss_dim_);
+			scots::matrixExp(l_matrix, le, input_id, t-x, ss_dim_);
 			disturbance_type f_value;
 			for (int i = 0; i < ss_dim_; ++i){
 				f_value[i]=0;
@@ -59,7 +58,7 @@ public:
 		for (abs_type i = 0; i < M; ++i)
 		{
 			scots::simpson3(f,w_integrals,i,0,t, 6, ss_dim);
-			scots::matrixExp(l_matrix, l_exp[i], M, i, t, ss_dim);
+			scots::matrixExp(l_matrix, l_exp[i], i, t, ss_dim);
 		}
 		
 	}
@@ -74,8 +73,6 @@ public:
 				r_es[i]=l_exp[u_id][i][j]*r[i]+w_integrals[i];
 			
 		}
-			
-		
 		return r_es;
 	}
 };

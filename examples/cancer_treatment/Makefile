@@ -1,12 +1,12 @@
+
+
 #
 # compiler
 #
-CC        = g++
+CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -g -Wall -Wextra -std=c++11
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG
-
-
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
+#CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 
 #
@@ -14,15 +14,20 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-.PHONY: cancer_treatment 
+Eigen            = -I/opt/local
 
-TARGET = cancer_treatment 
+.PHONY: cancer_treatment
+
+TARGET = cancer_treatment
 
 all: $(TARGET)
 
 cancer_treatment: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) cancer_treatment.cc -o cancer_treatment
+	$(CC) $(CXXFLAGS) $(SCOTSINC) $(Eigen) cancer_treatment.cc -o cancer_treatment
 
+#simulate: 
+#	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
-	rm cancer_treatment 
+	rm cancer_treatment
+

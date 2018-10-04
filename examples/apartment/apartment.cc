@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <array>
-#include <unsupported/Eigen/MatrixFunctions>
+
 /* SCOTS header */
 #include "scots.hh"
 /* ode solver */
@@ -28,7 +28,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 struct rusage usage;
-using namespace Eigen;
+
 /* state space dim */
 const int state_dim=3;
 /* input space dim */
@@ -105,8 +105,8 @@ void main_parameters(const int p1){
 
   disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{8.6-p1*s_eta[0],0,-3.5}};
-  disturbance_type w2_ub={{10+p1*s_eta[0],1.2+p1*s_eta[1],3.5}};
+  disturbance_type w2_lb={{7.6-p1*s_eta[0],0,-3.5}};
+  disturbance_type w2_ub={{10+p1*s_eta[0],1.8+p1*s_eta[1],3.5}};
   double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
@@ -115,15 +115,16 @@ void main_parameters(const int p1){
     input_type u;
     is.itox(input_id,u);
     for (int i = 0; i < state_dim; ++i)
-      for (int j = 0; j < state_dim; ++j)
+      for (int j = 0; j < state_dim; ++j){
         if ((i==0&&j==2) ||(i==1&&j==2))
           l[i][j]=std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
         else
           l[i][j]=0;  
+      }
     return l;
   };
 
-  scots::GbEstimation<disturbance_type,matrix_type> ge(ss, is,w_1,w_2);
+  scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
   ge.exp_interals(l_matrix,tau/10);
 
   auto rs_post = [&dis,&ge,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
@@ -292,7 +293,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
 int  main()
 {
  
-  for (int k = 0; k < 25; ++k)
+  for (int k = 0; k < 1; ++k)
   {
     
       main_parameters(k);

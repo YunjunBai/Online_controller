@@ -1,5 +1,4 @@
 
-
 #include <iostream>
 #include <array>
 
@@ -7,6 +6,9 @@
 #include "scots.hh"
 /* ode solver */
 #include "RungeKutta4.hh"
+#include "Simpson3.hh"
+#include "MatrixExp.hh"
+
 
 /* time profiling */
 #include "TicToc.hh"
@@ -23,11 +25,9 @@ const double k1 = 0.0;
 const double k2 = 2.0;
 const double k3=  0.8;
 const double k4 = 0.5;
-const double  m1=  0.00005;
+const double m1=  0.00005;
 const double z0 = 30.0;
 const double t = 12.5;
-const double r1 = 15.0;
-const double r0 = 10.0;
 const double d0 = 1.0;
 const double scale =50.0;
 /* state space dim */
@@ -46,7 +46,7 @@ using state_type = std::array<double,state_dim>;
 using disturbance_type = std::array<double, state_dim>;
 using input_type = std::array<double,input_dim>;
 using ds_type = std::array<double, 2*state_dim>;
-
+using matrix_type = std::array<std::array<double,state_dim>,state_dim>;
 /* abbrev of the type for abstract states and inputs */
 using abs_type = scots::abs_type;
 
@@ -80,18 +80,39 @@ int main(){
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
+  auto l_matrix=[&is](const abs_type& input_id){
+    matrix_type l;
+    input_type u;
+    is.itox(input_id,u);
+    l[0][0]=5.7412/50;
+    l[0][2]=10.7989/50;
+    l[1][0]=0.0025/50;
+    l[1][1]=0.3700/50;
+    l[1][2]=1.2125;
+    l[2][2]=-4*u[0]/50;
+    l[3][0]=0.5775/50;
+    l[3][1]=0.3700/50;
+    l[3][2]=10.7964/50;
+    return l;
+  };
+
+  scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
+  ge.exp_interals(l_matrix,tau/10);
+
+  auto rs_post = [&dis,&ge,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
     //std::cout<<"x"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<std::endl;
-    disturbance_type w = dis.get_disturbance(x,r);
+    r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es);
     double L[4][4];
     L[0][0]=5.7412/50;
     L[0][2]=10.7989/50;
@@ -124,19 +145,21 @@ int main(){
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
 
-    disturbance_type w = dis.get_disturbance(x,r); 
+    r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es); 
     //disturbance_type w = {0.05, 0.05, 0.05};
    double L[4][4];
     L[0][0]=5.7412/50;
