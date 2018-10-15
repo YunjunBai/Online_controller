@@ -26,7 +26,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexErrMsgIdAndTxt("MATLAB:GridPoints", 
                       "couldn't not read UniformGrid from file why: %s ",filename);
   }
-
+  
   /* read grid point indices */
 	bool success=true;
   scots::FileReader reader(filename);
@@ -44,7 +44,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
   mwSize dim = grid.get_dim();
   mwSize no_grid_points = abs_gp.size();
-
+  
   /* convert abstract cell IDs to the center of cells */
   plhs[0]=mxCreateDoubleMatrix(no_grid_points,dim,mxREAL);
   double *ptr=mxGetPr(plhs[0]);

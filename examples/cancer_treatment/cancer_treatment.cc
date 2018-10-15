@@ -31,7 +31,7 @@ const double t = 12.5;
 const double d0 = 1.0;
 const double scale =50.0;
 /* state space dim */
-const int state_dim=4;
+const int state_dim=3;
 /* input space dim */
 const int input_dim=1;
 
@@ -57,11 +57,11 @@ int main(){
 
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* lower bounds of the hyper rectangle */
-  state_type s_lb={{0,0,0,0}};
+  state_type s_lb={{0,0,0}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{30,30,30,30}};
+  state_type s_ub={{30,30,30}};
   /* grid node distance diameter */
-  state_type s_eta={{1,1,1,1}};
+  state_type s_eta={{0.2,0.2,0.2}};
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -71,10 +71,10 @@ int main(){
   scots::UniformGrid is(input_dim,input_type{{1}},input_type{{2}},input_type{{1}});
   is.print_info();
 
-  disturbance_type w_1={{0.0005, 0.00005, 0.0005,0.0001}};
-  disturbance_type w_2={{0.0003, 0.001, 0.00005,0.0001}};
-  disturbance_type w2_lb={{20,20,20,20}};
-  disturbance_type w2_ub={{30,30,30,30}};
+  disturbance_type w_1={{0.0005, 0.00005, 0.0005}};
+  disturbance_type w_2={{0.0003, 0.001, 0.00005}};
+  disturbance_type w2_lb={{20,20,20}};
+  disturbance_type w2_ub={{30,30,30}};
   double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   std::cout<<"chang persent:"<<persent<<std::endl;
 
@@ -90,9 +90,7 @@ int main(){
     l[1][1]=0.3700/50;
     l[1][2]=1.2125;
     l[2][2]=-4*u[0]/50;
-    l[3][0]=0.5775/50;
-    l[3][1]=0.3700/50;
-    l[3][2]=10.7964/50;
+   
     return l;
   };
 
@@ -120,9 +118,7 @@ int main(){
     L[1][1]=0.3700/50;
     L[1][2]=1.2125;
     L[2][2]=-4*u[0]/50;
-    L[3][0]=0.5775/50;
-    L[3][1]=0.3700/50;
-    L[3][2]=10.7964/50;
+   
     double Gx =((alphax * (k1 + ((1 - k1) * (y[2] / (y[2] + k2))))) - (betax * (k3 + (1 - k3) * (y[2] / (y[2] + k4)))));
     double Gy  =((alphay * (1 - (d0 * (y[2] / z0)))) - betay);
     double Mxy =(m1 * (1 - (y[2] / z0)));
@@ -133,12 +129,10 @@ int main(){
       yy[2] = (z0 - y[2]) / t;
     else
       yy[2]= (0 - y[2]) / t;
-    yy[3] = (Gx - Mxy) * y[0]  + Mxy * y[0] + Gy * y[1];
-    yy[4] = L[0][0]*y[4]+L[0][2]*y[6]+w[0];
-    yy[5] = L[1][0]*y[4]+L[1][1]*y[5]+L[1][2]*y[6]+w[1];
-    yy[6] = L[2][2]*y[6]+w[2];
-    yy[7] = L[3][0]*y[4]+L[3][1]*y[5]+L[3][2]*y[6]+w[3];
-   
+    yy[3] = L[0][0]*y[3]+L[0][2]*y[5]+w[0];
+    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+L[1][2]*y[5]+w[1];
+    yy[5] = L[2][2]*y[5]+w[2];
+    
   };
   //while(ignore==false){
     scots::runge_kutta_fixed4(rhs,y,u,dis, w2_lb,w2_ub, 2*state_dim,tau,10);
@@ -168,9 +162,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
     L[1][1]=0.3700/50;
     L[1][2]=1.2125;
     L[2][2]=-4*u[0]/50;
-    L[3][0]=0.5775/50;
-    L[3][1]=0.3700/50;
-    L[3][2]=10.7964/50;
+   
     double Gx =((alphax * (k1 + ((1 - k1) * (y[2] / (y[2] + k2))))) - (betax * (k3 + (1 - k3) * (y[2] / (y[2] + k4)))));
     double Gy  =((alphay * (1 - (d0 * (y[2] / z0)))) - betay);
     double Mxy =(m1 * (1 - (y[2] / z0)));
@@ -181,11 +173,10 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
       yy[2] = (z0 - y[2]) / t;
     else
       yy[2]= (0 - y[2]) / t;
-    yy[3] = (Gx - Mxy) * y[0]  + Mxy * y[0] + Gy * y[1];
-    yy[4] = L[0][0]*y[4]+L[0][2]*y[6]+w[0];
-    yy[5] = L[1][0]*y[4]+L[1][1]*y[5]+L[1][2]*y[6]+w[1];
-    yy[6] = L[2][2]*y[6]+w[2];
-    yy[7] =L[3][0]*y[4]+L[3][1]*y[5]+L[3][2]*y[6]+w[3];
+    yy[3] = L[0][0]*y[3]+L[0][2]*y[5]+w[0];
+    yy[4] = L[1][0]*y[3]+L[1][1]*y[4]+L[1][2]*y[5]+w[1];
+    yy[5] = L[2][2]*y[5]+w[2];
+   
    
   };
   //ignore = dis.get_out_of_domain();
@@ -226,7 +217,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d,tf_standard, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost);
   // if(!getrusage(RUSAGE_SELF, &usage))
   //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
@@ -239,7 +230,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
 
     /* function returns 1 if cell associated with x is in target set  */
     if (0 <= x[0] && 0<=x[1]  && 
-        0 <= x[2] && 0<=x[3])
+        0 <= x[2])
       return true;
     return false;
   };

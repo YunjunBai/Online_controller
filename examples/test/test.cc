@@ -204,7 +204,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub, p2](ds_type &y, input_type &u, bool &neigbou
     std::cout << "Done. \n";
 
   std::ofstream write;
-  std::ifstream read;
+  //std::ifstream read;
   write.open("result.txt", std::ios::app);          
   write << "  p1:"<<p1<<"   p2:"<<p2<<"   t1:"<<t1<<"   t2:"<<t2<<"   t3:"<<t3<<"  t4:"<<t4<<std::endl;
   write.close();

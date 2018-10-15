@@ -164,6 +164,7 @@ public:
     abs_type counter=0;
     /* some grid information */
     std::vector<abs_type> NN=m_state_alphabet.get_nn();
+    std::queue<abs_type> compute_queue; 
     /* variables for managing the post */
     std::vector<abs_type> lb(dim);  /* lower-left corner */
     std::vector<abs_type> ub(dim);  /* upper-right corner */
@@ -522,7 +523,7 @@ public:
 template<class F2, class F3, class F4=decltype(params::avoid_abs)>
   void recompute_gb(TransitionFunction& new_transition,
                     const TransitionFunction& old_transition, 
-                    const TransitionFunction& standard_transition, 
+                   
                     F2& d_lb,
                     F2& d_ub,
                     F3& rs_repost,
@@ -861,10 +862,10 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         for(abs_type j=0; j<M; j++) {
           sum+=new_transition.m_no_pre[i*M+j];
           new_transition.m_pre_ptr[i*M+j]=sum; 
-          if (new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])
-              {
-                std::cout<<i<<" "<<j<<recomputed_mark[i*M+j]<<" "<<new_transition.out_of_domain[i*M+j]<<" "<<standard_transition.out_of_domain[i*M+j]<<std::endl;
-              }    
+          // if (new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])
+          //     {
+          //       std::cout<<i<<" "<<j<<recomputed_mark[i*M+j]<<" "<<new_transition.out_of_domain[i*M+j]<<" "<<standard_transition.out_of_domain[i*M+j]<<std::endl;
+          //     }    
         }
       }
         

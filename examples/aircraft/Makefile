@@ -1,12 +1,10 @@
 #
 # compiler
 #
-CC        = g++
+CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -g -Wall -Wextra -std=c++11
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG
-
-
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g -o speed
+#CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 
 #
@@ -14,18 +12,20 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-.PHONY: aircraft simulate
+Eigen            = -I/opt/local
 
-TARGET = aircraft simulate
+.PHONY: aircraft
+
+TARGET = aircraft
 
 all: $(TARGET)
 
 aircraft: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) aircraft.cc -o aircraft
+	$(CC) $(CXXFLAGS) $(SCOTSINC) $(Eigen) aircraft.cc -o aircraft
 
-simulate: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
-
+#simulate: 
+#	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
-	rm aircraft simulate
+	rm aircraft
+

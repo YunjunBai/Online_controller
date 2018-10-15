@@ -7,8 +7,9 @@
 #include <cstring>
 #include <vector>
 #include <queue>
-#include "Simpson3.hh"
 #include "MatrixExp.hh"
+#include "Simpson3.hh"
+
 #include "UniformGrid.hh"
 
 

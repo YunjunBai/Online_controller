@@ -10,7 +10,6 @@
 
 #include "UniformGrid.hh"
 
-
 namespace scots{
 namespace params {
   auto avoid_dis = [](const abs_type&) noexcept {return false;};
