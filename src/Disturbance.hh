@@ -4,6 +4,7 @@
 #define DISTURBANCE_HH_
 
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <vector>
 #include <queue>
@@ -69,6 +70,55 @@ public:
 
   ~Disturbance()=default;
 
+  void disturbance_read(){
+    std::string line;
+    std::ifstream myfile("DistMatGlobal_1.txt");
+    double value[ss_dim*3];
+    disturbance_type d;
+    disturbance_type lb;
+    disturbance_type ub;
+  for (std::string line; std::getline(myfile,line);  ){
+    std::string::size_type sz;    
+    for (int i = 0; i < 12; ++i)
+    {
+      double tmp=std::stod(line,&sz);
+      value[i]=tmp;
+    }
+   for (int j = 0; j < ss_dim; ++j)
+      {
+        d[j]=value[j];
+        lb[j]=value[j+ss_dim];
+        ub[j]=value[j+ss_dim*2];
+      }
+      update_disturbance(d,lb,ub);
+      //value.clear();
+  }
+  }
+
+  void disturbance_readlocal(){
+    std::string line;
+    std::ifstream myfile("DistMatLocal_1.txt");
+    double value[ss_dim*3];
+    disturbance_type d;
+    disturbance_type lb;
+    disturbance_type ub;
+  for (std::string line; std::getline(myfile,line);  ){
+    std::string::size_type sz;    
+    for (int i = 0; i < 12; ++i)
+    {
+      double tmp=std::stod(line,&sz);
+      value[i]=tmp;
+    }
+   for (int j = 0; j < ss_dim; ++j)
+      {
+        d[j]=value[j];
+        lb[j]=value[j+ss_dim];
+        ub[j]=value[j+ss_dim*2];
+      }
+      manipulator_local(d,lb,ub);
+      //value.clear();
+  }
+  }
   /*BDD subset_X is the region where the disturbance need to change to new_w*/
   template<class F1, class F2, class F4=decltype(params::avoid_dis)>
   void update_disturbance(F1& new_disturbance, 
@@ -83,7 +133,7 @@ public:
     std::vector<abs_type> ub(ss_dim,0);  /* upper-right corner */
     std::vector<abs_type> no(ss_dim,0);  /* number of cells per dim */
     std::vector<abs_type> cc(ss_dim,0);  /* coordinate of current cell in the post */
-
+     //std::unique_ptr<bool[]> recomputed_mark(new bool[N*M]());
     abs_type nRegion=1;
     for (int i = 0; i < ss_dim; ++i)
     {
@@ -105,7 +155,7 @@ public:
           nRegion*=no[i];
           cc[i]=0;
         }
-        std::cout<<"The number of states in the new disturbance region: "<<nRegion<<std::endl;
+       // std::cout<<"The number of states in the new disturbance region: "<<nRegion<<std::endl;
         /* compute indices */
         for(abs_type k=0; k<nRegion; k++) {
           abs_type q=0;
@@ -275,6 +325,67 @@ bool get_out_of_domain(){
 void set_out_of_domain(){
   out_of_domain=false;
 }
+
+template<class F1, class F2, class F4=decltype(params::avoid_dis)>
+  void manipulator_local(F1& new_disturbance, 
+              F2& d_lb, 
+              F2& d_ub,
+              F4& avoid=params::avoid_dis){
+     abs_type N = states_alphabet.size();
+    disturbance_marker=true;
+    /*get all indices in that region, put ids into a queue*/
+    //std::queue<abs_type> id_queue;
+    std::vector<abs_type> lb(ss_dim,0);  /* lower-left corner */
+    std::vector<abs_type> ub(ss_dim,0);  /* upper-right corner */
+    std::vector<abs_type> no(ss_dim,0);  /* number of cells per dim */
+    std::vector<abs_type> cc(ss_dim,0);  /* coordinate of current cell in the post */
+    std::unique_ptr<bool[]> update_marker(new bool[N]());
+    abs_type nRegion=1;
+    for (int i = 0; i < ss_dim; ++i)
+    {
+          /* check for out of bounds */
+          double left = d_lb[i]-m_eta[i]/1e10;
+          double right = d_ub[i]+m_eta[i]/1e10;
+          if(left <= lower_left[i]-m_eta[i]/2.0)
+            left=lower_left[i];
+          if (right >= upper_right[i]+m_eta[i]/2.0)
+            right=upper_right[i];
+
+          /* integer coordinate of lower left corner of post */
+          lb[i] = static_cast<abs_type>((left-lower_left[i]+m_eta[i]/2.0)/m_eta[i]);
+          /* integer coordinate of upper right corner of post */
+          ub[i] = static_cast<abs_type>((right-lower_left[i]+m_eta[i]/2.0)/m_eta[i]);
+          /* number of grid points in the post in each dimension */
+          no[i]=(ub[i]-lb[i]+1);
+          /* total number of post */
+          nRegion*=no[i];
+          cc[i]=0;
+        }
+       // std::cout<<"The number of states in the new disturbance region: "<<nRegion<<std::endl;
+        /* compute indices */
+        for(abs_type k=0; k<nRegion; k++) {
+          abs_type q=0;
+          for(int l=0; l<ss_dim; l++) 
+            q+=(lb[l]+cc[l])*m_NN[l];
+          cc[0]++;
+          for(int l=0; l<ss_dim-1; l++) {
+            if(cc[l]==no[l]) {
+              cc[l]=0;
+              cc[l+1]++;
+            }
+          }
+          if(avoid(q))
+            continue;
+          if (!update_marker[q])
+          {
+            x_disturbance[q]=new_disturbance;
+          }
+          else{
+            x_disturbance[q]=std::max(x_disturbance[q],new_disturbance);
+          }
+         
+    }
+  }
 	
 };//class closed
 }//namespace closed

@@ -1,5 +1,5 @@
 function [] = PlotCells(X, eta, varargin)
-%     plotCells(X, 'facecolor', 'none', 'edgec', [0.8 0.8 0.8], 'linew', 0.1);
+%     plotCells(X, 'facecolor', 'none', 'edgec', [0.2 0.2 0.2], 'linew', 0.1);
     n=length(X(:,1));
     eh=eta./2;
     dim=size(X,2);

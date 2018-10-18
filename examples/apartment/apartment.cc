@@ -103,14 +103,14 @@ void main_parameters(const int p1){
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
 
-  disturbance_type w_1={{0.05, 0.1, 0.05}};
-  disturbance_type w_2={{0.03, 0.1, 0.05}};
-  disturbance_type w2_lb={{7.6-i_eta[0]*p1,0,-3.5}};
-  disturbance_type w2_ub={{10,1.8+i_eta[1]*p1*21/38,3.5}};
-  disturbance_type w_3={{0.03, 0.1, 0.05}};
-  disturbance_type w3_lb={{4.2,0,-3.5}};
-  disturbance_type w3_ub={{7.4,1.8,3.5}};
-  double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1]));
+  disturbance_type w_1={{0.05, 0.05, 0.05}};
+  disturbance_type w_2={{0.5, 0.5, 0.5}};
+  disturbance_type w2_lb={{4.2,0,-3.5}};
+  disturbance_type w2_ub={{7.4,1.8,3.5}};
+  disturbance_type w_3={{0.2, 0.2, 0.2}};
+  disturbance_type w3_lb={{7.6-i_eta[0]*p1,0,-3.5}};
+  disturbance_type w3_ub={{10,1.8+i_eta[1]*p1*21/38,3.5}};
+  double persent=(w3_ub[0]-w3_lb[0])*(w3_ub[1]-w3_lb[1])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
   auto l_matrix=[&is](const abs_type& input_id){
@@ -202,12 +202,12 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::TransitionFunction tf_standard;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
-  tt.tic();
-  abs.compute_gb(tf_o,rs_post, avoid);
-  //abs.compute_gb(tf,vehicle_post, radius_post);
-  tt.toc();
- std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
-  //if(!getrusage(RUSAGE_SELF, &usage))
+ //  tt.tic();
+ //  abs.compute_gb(tf_o,rs_post, avoid);
+ //  //abs.compute_gb(tf,vehicle_post, radius_post);
+ //  tt.toc();
+ // std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
+ //  if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   
   dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
@@ -257,7 +257,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   std::cout << "Winning domain size: " << win_1.get_size() << std::endl;
   
   std::cout << "\nWrite controller to controller_1.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_1"))
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_global"))
     std::cout << "Done. \n";
 
   std::cout << "\nSynthesis: new controller " << std::endl;
@@ -267,16 +267,16 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
   std::cout << "\nWrite controller to controller.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller"))
+  if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller_local"))
     std::cout << "Done. \n";
 
 
-    std::ofstream write;
-    std::ifstream read;
-    write.open("result.txt", std::ios::app);          
-    write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
-    write.close();
-    read.close();
+    // std::ofstream write;
+    // std::ifstream read;
+    // write.open("result.txt", std::ios::app);          
+    // write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
+    // write.close();
+    // read.close();
 
   // tt.tic();
   // std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);

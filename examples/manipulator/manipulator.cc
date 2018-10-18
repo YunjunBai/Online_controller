@@ -35,7 +35,7 @@ const int state_dim=4;
 const int input_dim=2;
 
 /* sampling time */
-const double tau = 0.3;
+const double tau = 0.003;
 const double m_1=1;
 const double m_2=1;
 const double l_1=0.5;
@@ -73,11 +73,11 @@ void main_parameters(const int p1){
 
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* lower bounds of the hyper rectangle */
-  state_type s_lb={{-M_PI/2,-M_PI/90,-M_PI/2,-M_PI/90}};
+  state_type s_lb={{-M_PI/2,-M_PI/4,-M_PI/2,-M_PI/4}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{M_PI/2,M_PI/90,M_PI/2,M_PI/90}};
+  state_type s_ub={{M_PI/2,M_PI/4,M_PI/2,M_PI/4}};
   /* grid node distance diameter */
-  state_type s_eta={{M_PI/20, M_PI/450,M_PI/20,M_PI/450 }};
+  state_type s_eta={{M_PI/20, M_PI/40,M_PI/20,M_PI/40 }};
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -88,18 +88,22 @@ void main_parameters(const int p1){
   /* upper bounds of the hyper rectangle */
   input_type i_ub={{ 20, 20}};
   /* grid node distance diameter */
-  input_type i_eta={{1,1}};
+  input_type i_eta={{2,2}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
 
-  disturbance_type w_1={{0, 3.4593, 0, 5.0489}};
-  disturbance_type w_2={{0, 2.7817, 0, 3.0569}};
-  disturbance_type w2_lb={{-M_PI/2,-M_PI/90,-M_PI/2,-M_PI/90}};
-  disturbance_type w2_ub={{0, 0, 0, 0}};
-  double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
+   disturbance_type w_1={{0, 0.4606, 0, 1.0742 }};
+  // //disturbance_type w_1={{0, 3.4593, 0, 8.0742 }};
+   disturbance_type w_2={{0, 3.4593, 0, 8.0742 }};
+  // disturbance_type w2_lb={{-M_PI/2,-M_PI/4,-M_PI/2,-M_PI/4}};
+  // disturbance_type w2_ub={{M_PI/2,0,M_PI/4,0}};
+  //disturbance_type w_3={{0, 3.4593, 0, 8.0742 }};
+  disturbance_type w3_lb={{-1.571, 0.471, 1.257, -0.157}};
+  disturbance_type w3_ub={{1.885,  2.199, 4.712, 1.571}};
+  // double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
-
+  dis.disturbance_read();
   auto l_matrix=[&is](const abs_type& input_id){
     matrix_type l;
     input_type u;
@@ -107,20 +111,20 @@ void main_parameters(const int p1){
     l[0][1]=1;
     l[2][3]=1;
     l[1][0]=6.9296;
-    l[1][1]=0.1228;
-    l[1][2]=19.6061+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
-    l[1][3]=0.0349;
+    l[1][1]=0.2210;
+    l[1][2]=19.7559+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
+    l[1][3]=0.0628;
     l[3][0]=31.8054;
-    l[3][1]=0.2577;
-    l[3][2]=9.8030 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
-    l[3][3]=0.0563;
+    l[3][1]=0.4638;
+    l[3][2]=9.8780 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
+    l[3][3]=0.1013;
     return l;
   };
 
-  scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
+  scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1, w_2);
   ge.exp_interals(l_matrix,tau/10);
 
-  auto rs_post = [&dis,&ge,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
+  auto rs_post = [&dis,&ge,w3_ub,w3_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
   auto rhs =[&dis,&ge](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
@@ -137,13 +141,13 @@ void main_parameters(const int p1){
     L[0][1]=1;
     L[2][3]=1;
     L[1][0]=6.9296;
-    L[1][1]=0.1228;
-    L[1][2]=19.6061+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
-    L[1][3]=0.0349;
+    L[1][1]=0.2210;
+    L[1][2]=19.7559+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
+    L[1][3]=0.0628;
     L[3][0]=31.8054;
-    L[3][1]=0.2577;
-    L[3][2]=9.8030 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
-    L[3][3]=0.0563;
+    L[3][1]=0.4638;
+    L[3][2]=9.8780 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
+    L[3][3]=0.1013;
     double F=(2*l_1*std::pow(l_2,3)*std::pow(m_2,2) + std::pow(l_1,3) *l_2*std::pow(m_2,2) + std::pow(l_1,3) *l_2*m_2*m_1)* std::pow(y[1],2)+2*l_1*std::pow(l_2,3)*std::pow(m_2,2)*y[1]*y[3];
     double H=std::pow(l_1,2)*std::pow(l_2,2)*std::pow(m_2,2)*(3*std::pow(y[2],2)+2*y[1]*y[3]);
     double P=l_1*l_2*m_2*u[0]-2*l_1*l_2*m_2*u[1];
@@ -159,14 +163,14 @@ void main_parameters(const int p1){
     yy[7]=L[3][0]*y[4]+L[3][1]*y[5]+L[3][2]*y[6]+L[3][3]*y[7]+w[3];
   };
   //while(ignore==false){
-    scots::runge_kutta_fixed4(rhs,y,u,dis, w2_lb,w2_ub, 2*state_dim,tau,10);
+    scots::runge_kutta_fixed4(rhs,y,u,dis, w3_lb,w3_ub, 2*state_dim,tau,10);
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,&ge,w3_lb,w3_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w3_lb,w3_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -179,16 +183,16 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
     disturbance_type w = dis.get_disturbance(x,r_es); 
     //disturbance_type w = {0.05, 0.05, 0.05};
     double L[4][4];
-    L[0][1]=1;
+   L[0][1]=1;
     L[2][3]=1;
     L[1][0]=6.9296;
-    L[1][1]=0.1228;
-    L[1][2]=19.6061+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
-    L[1][3]=0.0349;
+    L[1][1]=0.2210;
+    L[1][2]=19.7559+2*(u[0]+2*u[1])-1.0005e-07*(u[0]-3*u[1])-2.3020e-07*(u[0]-2*u[1]);
+    L[1][3]=0.0628;
     L[3][0]=31.8054;
-    L[3][1]=0.2577;
-    L[3][2]=9.8030 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
-    L[3][3]=0.0563;
+    L[3][1]=0.4638;
+    L[3][2]=9.8780 + 0.1113*(20*u[0]-20*u[1])+0.0369*20*u[1];
+    L[3][3]=0.1013;
     double F=(2*l_1*std::pow(l_2,3)*std::pow(m_2,2) + std::pow(l_1,3) *l_2*std::pow(m_2,2) + std::pow(l_1,3) *l_2*m_2*m_1)* std::pow(y[1],2)+2*l_1*std::pow(l_2,3)*std::pow(m_2,2)*y[1]*y[3];
     double H=std::pow(l_1,2)*std::pow(l_2,2)*std::pow(m_2,2)*(3*std::pow(y[2],2)+2*y[1]*y[3]);
     double P=l_1*l_2*m_2*u[0]-2*l_1*l_2*m_2*u[1];
@@ -206,7 +210,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,dis,w2_lb,w2_ub, 2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,dis,w3_lb,w3_ub, 2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;
@@ -220,7 +224,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
-  
+  //dis.update_disturbance(w_2, w2_lb, w2_ub);
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post);
   //abs.compute_gb(tf,vehicle_post, radius_post);
@@ -229,11 +233,11 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   //if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
-  dis.update_disturbance(w_2, w2_lb, w2_ub);
-
+    dis.disturbance_readlocal();
+   // dis.update_disturbance(w_3, w3_lb, w3_ub);
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_o1d, w3_lb, w3_ub, rs_repost);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
@@ -285,12 +289,12 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
     std::cout << "Done. \n";
 
 
-    std::ofstream write;
-    std::ifstream read;
-    write.open("result.txt", std::ios::app);          
-    write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
-    write.close();
-    read.close();
+    // std::ofstream write;
+    // std::ifstream read;
+    // write.open("result.txt", std::ios::app);          
+    // write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
+    // write.close();
+    // read.close();
 
   // tt.tic();
   // std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);

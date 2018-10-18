@@ -71,10 +71,14 @@ int main(){
   scots::UniformGrid is(input_dim,input_type{{1}},input_type{{2}},input_type{{1}});
   is.print_info();
 
-  disturbance_type w_1={{0.0005, 0.00005, 0.0005}};
-  disturbance_type w_2={{0.0003, 0.001, 0.00005}};
+  //disturbance_type w_1={{0.0005, 0.0005, 0.0005}};
+  disturbance_type w_1={{0.003, 0.001, 0.001}};
+  disturbance_type w_2={{0.003, 0.001, 0.001}};
   disturbance_type w2_lb={{20,20,20}};
   disturbance_type w2_ub={{30,30,30}};
+  disturbance_type w_3={{0.0006, 0.00002, 0.00005}};
+  disturbance_type w3_lb={{10,10,10}};
+  disturbance_type w3_ub={{20,20,20}};
   double persent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])*(w2_ub[2]-w2_lb[2])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1])*(s_ub[2]-s_lb[2]));
   std::cout<<"chang persent:"<<persent<<std::endl;
 
@@ -97,7 +101,7 @@ int main(){
   scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
   ge.exp_interals(l_matrix,tau/10);
 
-  auto rs_post = [&dis,&ge,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
+  auto rs_post = [&dis,&ge,w3_ub,w3_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
   auto rhs =[&dis,&ge](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
@@ -135,14 +139,14 @@ int main(){
     
   };
   //while(ignore==false){
-    scots::runge_kutta_fixed4(rhs,y,u,dis, w2_lb,w2_ub, 2*state_dim,tau,10);
+    scots::runge_kutta_fixed4(rhs,y,u,dis, w3_lb,w3_ub, 2*state_dim,tau,10);
   //  ignore = dis.get_out_of_domain();
 };
 
-auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis,&ge,w3_lb,w3_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w3_lb,w3_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -181,7 +185,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   };
   //ignore = dis.get_out_of_domain();
   //if(ignore==false)    
-  scots::runge_kutta_fixed4(rhs,y,u,dis,w2_lb,w2_ub, 2*state_dim,tau,10);
+  scots::runge_kutta_fixed4(rhs,y,u,dis,w3_lb,w3_ub, 2*state_dim,tau,10);
 
   if(dis.get_intersection_check()==true){
     neigbour=true;
@@ -192,10 +196,20 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   std::cout << "\nComputing the initial transition function (before distrubance changes): " << std::endl;
   /* transition function of symbolic model */
   scots::TransitionFunction tf_o1d;
+  scots::TransitionFunction tf_o;
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
+  tt.tic();
+  abs.compute_gb(tf_o,rs_post);
+  //abs.compute_gb(tf,vehicle_post, radius_post);
+  tt.toc();
+
+  //if(!getrusage(RUSAGE_SELF, &usage))
+ //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
+  std::cout << "Number of transitions: " << tf_o.get_no_transitions() << std::endl;
+  dis.update_disturbance(w_2, w2_lb, w2_ub);
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post);
   //abs.compute_gb(tf,vehicle_post, radius_post);
@@ -204,8 +218,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   //if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_o1d.get_no_transitions() << std::endl;
-  dis.update_disturbance(w_2, w2_lb, w2_ub);
-
+dis.update_disturbance(w_3, w3_lb, w3_ub);
    std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.compute_gb(tf_standard,rs_post);
@@ -217,7 +230,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbou
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,tf_o1d, w3_lb, w3_ub, rs_repost);
   // if(!getrusage(RUSAGE_SELF, &usage))
   //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
