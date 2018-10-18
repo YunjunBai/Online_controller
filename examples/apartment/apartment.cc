@@ -102,9 +102,9 @@ void main_parameters(const int p1){
 
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
-
-  disturbance_type w_1={{0.05, 0.05, 0.05}};
-  disturbance_type w_2={{0.5, 0.5, 0.5}};
+  //disturbance_type w_1={{0.1, 0.1, 0.1}};
+  //disturbance_type w_1={{0.05, 0.05, 0.05}};
+  disturbance_type w_2={{0.1, 0.1, 0.1}};
   disturbance_type w2_lb={{4.2,0,-3.5}};
   disturbance_type w2_ub={{7.4,1.8,3.5}};
   disturbance_type w_3={{0.2, 0.2, 0.2}};
@@ -202,13 +202,13 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::TransitionFunction tf_standard;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
- //  tt.tic();
- //  abs.compute_gb(tf_o,rs_post, avoid);
- //  //abs.compute_gb(tf,vehicle_post, radius_post);
- //  tt.toc();
- // std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
- //  if(!getrusage(RUSAGE_SELF, &usage))
- //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
+  tt.tic();
+  abs.compute_gb(tf_o,rs_post, avoid);
+  //abs.compute_gb(tf,vehicle_post, radius_post);
+  tt.toc();
+ std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
+  if(!getrusage(RUSAGE_SELF, &usage))
+   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   
   dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
   tt.tic();
@@ -249,15 +249,22 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
    /* write target to file */
   write_to_file(ss,target,"target");
 
- 
+  std::cout << "\nSynthesis: old controller" << std::endl;
+  tt.tic();
+  scots::WinningDomain win_o=scots::solve_reachability_game(tf_o,target);
+  tt.toc();
+  std::cout << "Winning domain size: " << win_o.get_size() << std::endl;
+  std::cout << "\nWrite controller to controller_1.scs \n";
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_o)),"controller_scots_2"))
+    std::cout << "Done. \n";
+
   std::cout << "\nSynthesis: old controller" << std::endl;
   tt.tic();
   scots::WinningDomain win_1=scots::solve_reachability_game(tf_o1d,target);
   tt.toc();
   std::cout << "Winning domain size: " << win_1.get_size() << std::endl;
-  
   std::cout << "\nWrite controller to controller_1.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_global"))
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_1)),"controller_global_2"))
     std::cout << "Done. \n";
 
   std::cout << "\nSynthesis: new controller " << std::endl;

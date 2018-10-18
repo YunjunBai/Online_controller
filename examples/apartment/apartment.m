@@ -5,7 +5,42 @@ close all
 figure
 hold on
 
-addpath(genpath('/home/baiyunjun/Documents/online_algorithm/mfiles/'))
+addpath(genpath('/var/tmp/online_algorithm/mfiles/'))
+
+% target set
+lb=[9 0];
+ub=lb+0.5;
+% initial state
+x0=[0.6 0.6 0];
+
+
+% load controller from file
+controller=StaticController('controller_global');
+
+% simulate closed loop system
+y=x0;
+v=[];
+loop=3000;
+
+% tau
+tau=0.3;
+
+while(loop>0)
+    loop=loop-1;
+  
+  if (lb(1) <= y(end,1) & y(end,1) <= ub(1) &&...
+      lb(2) <= y(end,2) & y(end,2) <= ub(2))
+    break;
+  end 
+
+  u=controller.control(y(end,:));
+  v=[v; u];
+
+  [t x]=ode45(@unicycle_ode,[0 tau], y(end,:), odeset('abstol',1e-12,'reltol',1e-12),u);
+  
+  y=[y; x(end,:)];
+
+end
 % plot the vehicle domain
 % colors
 colors=get(groot,'DefaultAxesColorOrder');
@@ -39,9 +74,19 @@ for k=1:size(domain_scots,1)
     x=domain_scots(k,1)-0.1;
     y=domain_scots(k,2)-0.1;
     %rectangle('Position',[x y 0.2 0.2],'FaceColor','red','EdgeColor','red');
-    rectangle('Position',[x y 0.2 0.2]);
+    %rectangle('Position',[x y 0.2 0.2]);
 end
 
+function dxdt = unicycle_ode(t,x,u)
+
+  dxdt = zeros(3,1);
+  c=atan(tan(u(2))/2);
+
+  dxdt(1)=u(1)*cos(c+x(3))/cos(c);
+  dxdt(2)=u(1)*sin(c+x(3))/cos(c);
+  dxdt(3)=u(1)*tan(u(2));
+
+end
 % plot the real obstacles and target set
 plot_domain
 

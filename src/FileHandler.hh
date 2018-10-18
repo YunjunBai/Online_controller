@@ -20,7 +20,7 @@
 #ifdef SCOTS_BDD
 /* writing and reading bdd files */
 #include <stdlib.h>
-#include "dddmp.h"
+//#include "dddmp.h"
 #include "cuddObj.hh"
 #endif
 

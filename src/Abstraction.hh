@@ -220,8 +220,7 @@ public:
         m_input_alphabet.itox(j,u);
         /* integrate system and radius growth bound */
         /* the result is stored in x and r */
- 
-      
+
         rs_post(y,u);
         
         for (int k = 0; k<dim; ++k)
@@ -654,10 +653,10 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         out_of_region[q]=false;  
     }
     std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
-    abs_type coun=0;
+    
    
    abs_type conn=0;
-
+    abs_type coun=0;
    /*start big loop untill the recompute_queue become empty*/
     while(!recompute_queue.empty())
     {
@@ -782,7 +781,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     }
   
     std::cout<<"recomputing transitions untill queue empty";
-    std::cout<<"total number of recomputing states * inputs:" <<coun<<std::endl;
+    std::cout<<"total percent" <<coun<<std::endl;
       /*copy from old transtions*/
       for(abs_type i = 0; i < N; ++i )
       { 
