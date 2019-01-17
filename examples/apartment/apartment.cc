@@ -103,11 +103,11 @@ void main_parameters(const int p1){
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
   //disturbance_type w_1={{0.1, 0.1, 0.1}};
-  //disturbance_type w_1={{0.05, 0.05, 0.05}};
+  disturbance_type w_1={{0.05, 0.05, 0.05}};
   disturbance_type w_2={{0.1, 0.1, 0.1}};
-  disturbance_type w2_lb={{4.2,0,-3.5}};
-  disturbance_type w2_ub={{7.4,1.8,3.5}};
-  disturbance_type w_3={{0.2, 0.2, 0.2}};
+  disturbance_type w2_lb={{0.5,2,-3.5}};
+  disturbance_type w2_ub={{2.5,4,3.5}};
+  disturbance_type w_3={{0.1, 0.1, 0.1}};
   disturbance_type w3_lb={{7.6-i_eta[0]*p1,0,-3.5}};
   disturbance_type w3_ub={{10,1.8+i_eta[1]*p1*21/38,3.5}};
   double persent=(w3_ub[0]-w3_lb[0])*(w3_ub[1]-w3_lb[1])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1]));
@@ -201,14 +201,16 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  std::queue<abs_type> online_queue; 
+
   
-  tt.tic();
-  abs.compute_gb(tf_o,rs_post, avoid);
-  //abs.compute_gb(tf,vehicle_post, radius_post);
-  tt.toc();
- std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
-  if(!getrusage(RUSAGE_SELF, &usage))
-   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
+ //  tt.tic();
+ //  abs.compute_gb(tf_o,rs_post, avoid);
+ //  //abs.compute_gb(tf,vehicle_post, radius_post);
+ //  tt.toc();
+ // std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
+ //  if(!getrusage(RUSAGE_SELF, &usage))
+ //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   
   dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
   tt.tic();
@@ -219,11 +221,12 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   dis.update_disturbance(w_3, w3_lb, w3_ub,avoid);
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w3_lb, w3_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,online_queue, tf_o1d, w3_lb, w3_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   double t1=tt.toc();
+  std::cout<<"onlinequeuesize:"<<online_queue.size()<<std::endl;
 
    std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
@@ -233,7 +236,6 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
   double t2= tt.toc();
-  
   
 
   /* define target set */
@@ -249,14 +251,14 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
    /* write target to file */
   write_to_file(ss,target,"target");
 
-  std::cout << "\nSynthesis: old controller" << std::endl;
-  tt.tic();
-  scots::WinningDomain win_o=scots::solve_reachability_game(tf_o,target);
-  tt.toc();
-  std::cout << "Winning domain size: " << win_o.get_size() << std::endl;
-  std::cout << "\nWrite controller to controller_1.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win_o)),"controller_scots_2"))
-    std::cout << "Done. \n";
+  // std::cout << "\nSynthesis: old controller" << std::endl;
+  // tt.tic();
+  // scots::WinningDomain win_o=scots::solve_reachability_game(tf_o,target);
+  // tt.toc();
+  // std::cout << "Winning domain size: " << win_o.get_size() << std::endl;
+  // std::cout << "\nWrite controller to controller_1.scs \n";
+  // if(write_to_file(scots::StaticController(ss,is,std::move(win_o)),"controller_scots_2"))
+  //   std::cout << "Done. \n";
 
   std::cout << "\nSynthesis: old controller" << std::endl;
   tt.tic();
@@ -285,19 +287,14 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
     // write.close();
     // read.close();
 
-  // tt.tic();
-  // std::queue<abs_type> online_queue = tf_o1d.get_difference(tf_new, win);
-  // tt.toc();
-  // std::cout<<"onlinequeuesize:"<<online_queue.size()<<std::endl;
-
-  // std::cout << "\nOnline Synthesis: " << std::endl;
-  // tt.tic();
-  // scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue,avoid, win);
-  // tt.toc();
-  // std::cout << "Winning domain size: " << win_online.get_size() << std::endl;
-  // std::cout << "\nWrite controller to online_controller.scs \n";
-  // if(write_to_file(scots::StaticController(ss,is,std::move(win_online)),"online_controller"))
-  //   std::cout << "Done. \n";
+  std::cout << "\nOnline Synthesis: " << std::endl;
+  tt.tic();
+  scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue,avoid, win);
+  tt.toc();
+  std::cout << "Winning domain size: " << win_online.get_size() << std::endl;
+  std::cout << "\nWrite controller to online_controller.scs \n";
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_online)),"online_controller"))
+    std::cout << "Done. \n";
 
 
  // std::cout<<"\nstatic synthesis:"<<std::endl;

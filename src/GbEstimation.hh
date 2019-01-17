@@ -9,7 +9,6 @@
 #include <queue>
 #include "MatrixExp.hh"
 #include "Simpson3.hh"
-
 #include "UniformGrid.hh"
 
 
