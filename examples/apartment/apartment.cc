@@ -212,7 +212,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
  //  if(!getrusage(RUSAGE_SELF, &usage))
  //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
   
-  dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
+  //dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post, avoid);
   //abs.compute_gb(tf,vehicle_post, radius_post);

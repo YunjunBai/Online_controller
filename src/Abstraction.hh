@@ -157,7 +157,7 @@ public:
     /* number of inputs */
     abs_type M=m_input_alphabet.size();
     /* number of transitions (to be computed) */
-    abs_ptr_type T=0; 
+    //abs_ptr_type T=0; 
     /* state space dimension */
     int dim=m_state_alphabet.get_dim();
     /* for display purpose */
@@ -169,7 +169,11 @@ public:
     /* radius of hyper interval containing the attainable set */
     state_type eta;
     /* state and input variables */
-    
+    /* variables for managing the region */
+      std::vector<abs_type> lb(dim);  /* lower-left corner */
+      std::vector<abs_type> ub(dim);  /* upper-right corner */
+      std::vector<abs_type> no(dim);  /* number of cells per dim */
+      std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
     /* for out of bounds check */
     state_type lower_left;
     state_type upper_right;
@@ -189,23 +193,29 @@ public:
      * corner_IDs[i*M+j][1] = upper-right cell index of over-approximation of attainable set 
      */
     /* loop over all cells */
-    #pragma omp parallel {
-    #pragma omp simd collapse(2)
+   
+    #pragma omp parallel for 
     for(abs_type i=0; i<N; i++) {
-     
-      /* is i an element of the avoid symbols ? */
+
       if(avoid(i)) {
-        for(abs_type j=0; j<M; j++) {
-          transition_function.out_of_domain[i*M+j]=true;
+          for(abs_type j=0; j<M; j++) {
+            transition_function.out_of_domain[i*M+j]=true;
+          }
+          continue;
         }
-        continue;
-      }
+        state_type x;
+        input_type u;
+        ds_type y;
+        state_type r; 
+        /* variables for managing the region */
+      std::vector<abs_type> lb(dim);  /* lower-left corner */
+      std::vector<abs_type> ub(dim);  /* upper-right corner */
+      std::vector<abs_type> no(dim);  /* number of cells per dim */
+      std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
       /* loop over all inputs */
       for(abs_type j=0; j<M; j++) {
-         state_type x;
-         input_type u;
-         ds_type y;
-         state_type r;
+          /* is i an element of the avoid symbols ? */
+        
         transition_function.out_of_domain[i*M+j]=false;
         /* get center x of cell */
         m_state_alphabet.itox(i,x);
@@ -245,11 +255,6 @@ public:
             transition_function.out_of_domain[i*M+j]=true;
             break;
           } 
-          /* variables for managing the post */
-          std::vector<abs_type> lb(dim);  /* lower-left corner */
-          std::vector<abs_type> ub(dim);  /* upper-right corner */
-          std::vector<abs_type> no(dim);  /* number of cells per dim */
-          std::vector<abs_type> cc(dim);  /* coordinate of current cell in the post */
           /* integer coordinate of lower left corner of post */
           lb[k] = static_cast<abs_type>((left-lower_left[k]+eta[k]/2.0)/eta[k]);
           /* integer coordinate of upper right corner of post */
@@ -287,7 +292,7 @@ public:
             transition_function.corner_IDs[i*(2*M)+2*j+1]=q;
         }
         /* increment number of transitions by number of post */
-        T+=npost;
+        //T+=npost;
         transition_function.m_no_post[i*M+j]=npost;
       }
       /* print progress */
@@ -299,8 +304,6 @@ public:
       progress(i,N,counter);
     }
 
-  }// end of parallel
-
     /* compute pre_ptr */
     abs_ptr_type sum=0;
     for(abs_type i=0; i<N; i++) {
@@ -310,7 +313,7 @@ public:
       }
     }
     /* allocate memory for pre list */
-    transition_function.init_transitions(T);
+    transition_function.init_transitions(sum);
 
     /* second loop: fill pre array */
     counter=0;
@@ -539,8 +542,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     abs_type N=m_state_alphabet.size(); 
     /* number of inputs */
     abs_type M=m_input_alphabet.size();
-    /* number of transitions (to be computed) */
-    abs_ptr_type T=0; 
+   
     /* state space dimension */
     int dim=m_state_alphabet.get_dim();
     /* for display purpose */
@@ -554,7 +556,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
     /* radius of hyper interval containing the attainable set */
     state_type eta;
-    
+   
     /* for out of bounds check */
     state_type lower_left;
     state_type upper_right;
@@ -580,7 +582,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     std::vector<bool> diff_done(N,false);
     /*some variables for computing neighbours*/
     std::vector<int> tmp;
-    abs_type neighbours;
+    
     std::vector<std::vector<int>>  cc_neighbours;
 
     int num[]={-1,0,1};
@@ -662,16 +664,15 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
    abs_type conn=0;
     abs_type coun=0;
    /*start big loop untill the recompute_queue become empty*/
-    #pragma omp parallel{
-    #pragma omp simd collapse(2)
-    //while(!recompute_queue.empty())
-    for (; !recompute_queue.empty(); recompute_queue.pop())
+ 
+    //for (;!recompute_queue.empty();recompute_queue.pop())
+    while(!recompute_queue.empty())
     {
-      
-    /* q is a state which needs to recompute transitions, post of q*/
-      auto& q = recompute_queue.front();
+      abs_type q = recompute_queue.front(); 
       recompute_queue.pop();
+    /* q is a state which needs to recompute transitions, post of q*/
       coun++;
+      
           /* is q an element of the avoid symbols ? */
       if(avoid(q)) {
         for(abs_type j=0; j<M; j++) {
@@ -679,13 +680,18 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         }
         continue;
       }
-     
       /* loop over all inputs */
+      #pragma omp parallel for 
       for(abs_type j=0; j<M; j++){
         state_type x;
         input_type u;
         ds_type y;
-        state_type r;
+        state_type r; 
+        /* variables for managing the region */
+      std::vector<abs_type> lb(dim);  /* lower-left corner */
+      std::vector<abs_type> ub(dim);  /* upper-right corner */
+      std::vector<abs_type> no(dim);  /* number of cells per dim */
+      std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
         //new_transition.out_of_domain[q*M+j]=false;
         if(input_todo[q*M+j]){
           input_todo[q*M+j]=false;
@@ -729,11 +735,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
               new_transition.out_of_domain[q*M+j]=true;
               break;
             } 
-            /* variables for managing the region */
-            std::vector<abs_type> lb(dim);  /* lower-left corner */
-            std::vector<abs_type> ub(dim);  /* upper-right corner */
-            std::vector<abs_type> no(dim);  /* number of cells per dim */
-            std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+            
             /* integer coordinate of lower left corner of post */
             lb[k] = static_cast<abs_type>((left-lower_left[k]+eta[k]/2.0)/eta[k]);
             /* integer coordinate of upper right corner of post */
@@ -772,7 +774,6 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
               new_transition.corner_IDs[q*(2*M)+2*j+1]=p;
           }
             /* increment number of transitions by number of post */
-           T+=npost;
            new_transition.m_no_post[q*M+j]=npost;
 
           if(out_of_region[q] && intersection_with_region){
@@ -780,7 +781,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
             conn++;
             for (int i = 0; i < ncc; ++i)
             {
-              neighbours=q;
+              abs_type neighbours=q;
               for (int k = 0; k<dim; ++k)
               {
                 neighbours += cc_neighbours[i][k]*NN[k];
@@ -797,7 +798,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       }
 
     }
-  }//end parallel
+ 
     std::cout<<"recomputing transitions untill queue empty";
     std::cout<<"total percent" <<coun<<std::endl;
       /*copy from old transtions*/
@@ -806,7 +807,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         for (abs_type j = 0; j < M; ++j)
         {
            if(recomputed_mark[i*M+j] && !diff_done[i]){
-            diff.push_back(i);
+            diff.push(i);
             diff_done[i]=true;
           //   if(new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])
           //     std::cout<<"error"<<i<<std::endl;
@@ -815,7 +816,6 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           else{
             new_transition.out_of_domain[i*M+j]=old_transition.out_of_domain[i*M+j];
             new_transition.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
-            T+=new_transition.m_no_post[i*M+j];
             new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
             new_transition.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
           }           
@@ -889,7 +889,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       }
         
       /* allocate memory for pre list */
-      new_transition.init_transitions(T);
+      new_transition.init_transitions(sum);
       
       /*loop: fill pre array */
       counter=0;

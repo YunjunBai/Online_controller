@@ -3,7 +3,7 @@
 #
 CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g -o speed
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -fopenmp -O3 -DNDEBUG -g -o speed
 #CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 

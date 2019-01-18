@@ -1,12 +1,12 @@
+
+
 #
 # compiler
 #
-CC        = g++
+CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -g -Wall -Wextra -std=c++11
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG
-
-
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
+#CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 
 #
@@ -14,15 +14,20 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-.PHONY: quadcopter 
+Eigen            = -I/opt/local
 
-TARGET = quadcopter 
+.PHONY: quadcopter
+
+TARGET = quadcopter
 
 all: $(TARGET)
 
 quadcopter: 
-	$(CC) $(CXXFLAGS) $(SCOTSINC) quadcopter.cc -o quadcopter
+	$(CC) $(CXXFLAGS) $(SCOTSINC) $(Eigen) quadcopter.cc -o quadcopter
 
+#simulate: 
+#	$(CC) $(CXXFLAGS) $(SCOTSINC) simulate.cc -o simulate
 
 clean:
-	rm quadcopter 
+	rm quadcopter
+

@@ -42,3 +42,16 @@ Processing '/etc/joe/editorrc'...
 Processing '/etc/joe/ftyperc'...
 Finished processing /etc/joe/ftyperc
 Finished processing /etc/joe/editorrc
+
+*** These modified files were found in JOE when it aborted on Thu Jan 17 18:42:23 2019
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+svn-commit.2.tmp
+/home/baiyunjun/Documents/online_algorithm/.git/COMMIT_EDITMSG
+
+*** File '* Startup Log *'
+Processing '/etc/joe/editorrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/editorrc

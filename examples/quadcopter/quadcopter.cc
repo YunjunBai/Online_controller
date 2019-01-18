@@ -19,7 +19,8 @@
 #include "scots.hh"
 /* ode solver */
 #include "RungeKutta4.hh"
-
+#include "Simpson3.hh"
+#include "MatrixExp.hh"
 /* time profiling */
 #include "TicToc.hh"
 /* memory profiling */
@@ -40,7 +41,7 @@ using state_type = std::array<double,state_dim>;
 using input_type = std::array<double,input_dim>;
 using disturbance_type = std::array<double, state_dim>;
 using ds_type = std::array<double, 2*state_dim>;
-
+using matrix_type = std::array<std::array<double,state_dim>,state_dim>;
 
 int main() {
   /* to measure time */
@@ -50,7 +51,7 @@ int main() {
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* grid node distance diameter */
   /* optimized values computed according to doi: 10.1109/CDC.2015.7403185 */
-  state_type s_eta={{1,1,1,20*M_PI/180,20*M_PI/180,20*M_PI/180}}; 
+  state_type s_eta={{0.2,0.2,0.2,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180}};
   /* upper bounds of the hyper rectangle */
@@ -63,7 +64,7 @@ int main() {
   /* lower bounds of the hyper rectangle */
   input_type i_lb={{0,0,0,0,0,0}};
   /* upper bounds of the hyper rectangle */
-  input_type i_ub={{0.5,0.5,0.5,8*M_PI/180,8*M_PI/180,8*M_PI/180}};
+  input_type i_ub={{1,1,1,8*M_PI/180,8*M_PI/180,8*M_PI/180}};
   /* grid node distance diameter */
   input_type i_eta={{.25,.25,.25, 2*M_PI/180, 2*M_PI/180, 2*M_PI/180}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
@@ -82,16 +83,42 @@ int main() {
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
-  auto rs_post = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u) -> void {
-  auto rhs_1 =[&dis](ds_type &yy, const ds_type &y, input_type &u) -> void {
+   auto l_matrix=[&is](const abs_type& input_id){
+    matrix_type L;
+    input_type u;
+    is.itox(input_id,u);
+    L[0][3]=u[1]+u[2];
+    L[0][4]=u[2]+0.9129*u[0]+u[1];
+    L[0][5]=u[2]+0.5944*u[1]+0.1665*u[0];
+    L[1][3]=u[1]+u[2];
+    L[1][4]=u[2]+8.0165e-15*u[0]+0.8335*u[1];
+    L[1][5]=1.0409*u[2]+0.9860*u[1]+u[0];
+    L[2][3]=u[1]+0.9129*u[2];
+    L[2][4]=u[0]+u[2]+u[1]*0.8335;
+    L[3][3]=(3.3723e+11) * u[4] +(9.6712e+08)*u[5];
+    L[3][4]=6.0049*u[5]+u[4]*(4.7596e+13);
+    L[4][3]=u[4]+u[5];
+    L[5][3]=2.4505*u[4]+2.2372*u[5];
+    L[5][4]=u[4]*5.0049+u[5]*(8.5318+14);
+   
+    return L;
+  };
+
+  scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
+  ge.exp_interals(l_matrix,tau/10);
+
+  auto rs_post = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u) -> void {
+  auto rhs_1 =[&dis, &ge](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r);
+      r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es); 
     double L[6][6];
     L[0][3]=u[1]+u[2];
     L[0][4]=u[2]+0.9129*u[0]+u[1];
@@ -106,7 +133,6 @@ int main() {
     L[4][3]=u[4]+u[5];
     L[5][3]=2.4505*u[4]+2.2372*u[5];
     L[5][4]=u[4]*5.0049+u[5]*(8.5318+14);
-    
     yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
     yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
     yy[2] = -std::sin(y[4])*u[0]+std::sin(y[3])*std::cos(y[4])*u[1]+std::cos(y[3])*std::cos(y[4])*u[2];
@@ -125,21 +151,23 @@ int main() {
   scots::runge_kutta_fixed4(rhs_1,y,u,dis, w2_lb,w2_ub,2*state_dim,tau,10);
 };
 
-auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
+auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
   //dis.set_out_of_domain();
-  auto rhs =[&dis,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w2_lb,w2_ub](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
+    state_type r_es;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    disturbance_type w = dis.get_disturbance(x,r);
-   
-    double L[6][6];
-    L[0][3]=u[1]+u[2];
+    
+    r_es=ge.gb_estimate(r,u);
+    disturbance_type w = dis.get_disturbance(x,r_es); 
+     double L[6][6];
+     L[0][3]=u[1]+u[2];
     L[0][4]=u[2]+0.9129*u[0]+u[1];
     L[0][5]=u[2]+0.5944*u[1]+0.1665*u[0];
     L[1][3]=u[1]+u[2];
@@ -152,7 +180,6 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
     L[4][3]=u[4]+u[5];
     L[5][3]=2.4505*u[4]+2.2372*u[5];
     L[5][4]=u[4]*5.0049+u[5]*(8.5318+14);
-
     yy[0] = std::cos(y[4])*std::cos(y[5])*u[0]+(-std::cos(y[3])*std::sin(y[5])+std::sin(y[3])*std::sin(y[4])*std::cos(y[5]))*u[1]+(std::sin(y[3])*std::sin(y[5])+std::cos(y[3])*std::sin(y[4])*std::cos(y[5]))*u[3];
     yy[1] = std::cos(y[4])*std::sin(y[5])*u[0]+(std::cos(y[3])*std::cos(y[5])+std::sin(y[3])*std::sin(y[4])*std::sin(y[5]))*u[1]+(-std::sin(y[3])*std::cos(y[5])+std::cos(y[3])*std::sin(y[4])*std::sin(y[5]))*u[3];
     yy[2] = -std::sin(y[4])*u[0]+std::sin(y[3])*std::cos(y[4])*u[1]+std::cos(y[3])*std::cos(y[4])*u[2];
@@ -179,6 +206,8 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
 
  /* transition function of symbolic model */
   scots::TransitionFunction tf_old, tf_new, tf_standard,tf_new_com;
+  std::queue<abs_type> online_queue; 
+
 
   std::cout << "Computing the transition function: " << std::endl;
   tt.tic();
@@ -206,7 +235,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
 
   std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_old, w2_lb, w2_ub, rs_repost);
+  abs.recompute_gb(tf_new,online_queue,tf_old, w2_lb, w2_ub, rs_repost);
  
    std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
   tt.toc();

@@ -192,17 +192,20 @@ public:
   /*given a x, return the related w*/
   template<class F1, class F2, class F4=decltype(params::avoid_dis)>
     disturbance_type get_disturbance(F1& x, F2& r, F4& avoid=params::avoid_dis){
-        
+        abs_type no[ss_dim];
+        abs_type cc[ss_dim];
+        abs_type idx[ss_dim];
+        abs_type base[ss_dim];
         /*first check if disturbance update or not, if no, return initial disturbance*/
         if(!disturbance_marker){
           return init_disturbance;
         }
 
         std::vector<abs_type> corner_IDs(2,0);
-        for(int k=0; k<ss_dim; k++){
-          no[k]=0;
-          base[k]=0;
-        }
+        // for(int k=0; k<ss_dim; k++){
+        //   no[k]=0;
+        //   base[k]=0;
+        // }
         for(int k=0; k<ss_dim; k++) {
             /* check for out of bounds */
             double left = x[k]-r[k]-m_eta[k]/1e10;
