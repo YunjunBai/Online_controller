@@ -261,6 +261,7 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
   std::vector<abs_type> win_domain=wd.get_m_winning_domain(); // todo 
   /* initialize value with old value */
   std::vector<double> value=wd.get_value(); //todo
+  
   /* keep track of the number of processed post */
   std::unique_ptr<abs_type[]> K(new abs_type[N*M]); //todo
   /* keep track of the values (corresponds to M in Alg.2)*/

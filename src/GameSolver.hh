@@ -90,6 +90,7 @@ WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
       /* states in the target are added to the fifo */
       fifo.push(i);
     }
+    
     for(abs_type j=0; j<M; j++) {
       edge_val[i*M+j]=0;
       K[i*M+j]=trans_function.m_no_post[i*M+j];
@@ -127,10 +128,10 @@ WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
   }  /* fifo is empty */
 
   /* if the default value function was used, free the memory of the static object*/
-  if(value == scots::params::value){
-      value.clear();
-      value.shrink_to_fit();
-  }
+  // if(value == scots::params::value){
+  //     value.clear();
+  //     value.shrink_to_fit();
+  // }
 
   return WinningDomain(N,M,std::move(win_domain),std::move(value),std::vector<bool>{},loosing);
 }

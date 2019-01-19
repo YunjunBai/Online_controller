@@ -194,7 +194,7 @@ public:
      */
     /* loop over all cells */
    
-    #pragma omp parallel for 
+    #pragma omp parallel for num_threads(10)
     for(abs_type i=0; i<N; i++) {
 
       if(avoid(i)) {
@@ -665,7 +665,6 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
     abs_type coun=0;
    /*start big loop untill the recompute_queue become empty*/
  
-    //for (;!recompute_queue.empty();recompute_queue.pop())
     while(!recompute_queue.empty())
     {
       abs_type q = recompute_queue.front(); 
@@ -681,7 +680,8 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         continue;
       }
       /* loop over all inputs */
-      #pragma omp parallel for 
+      #pragma omp parallel 
+      #pragma omp single 
       for(abs_type j=0; j<M; j++){
         state_type x;
         input_type u;
@@ -775,7 +775,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           }
             /* increment number of transitions by number of post */
            new_transition.m_no_post[q*M+j]=npost;
-
+           #pragma omp task
           if(out_of_region[q] && intersection_with_region){
             //q_neighour(q, dim, recompute_queue,recomputed_mark,NN, N);
             conn++;
@@ -795,8 +795,9 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
             }
           }  
         }
-      }
-
+      
+    
+  }
     }
  
     std::cout<<"recomputing transitions untill queue empty";
@@ -806,7 +807,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
       { 
         for (abs_type j = 0; j < M; ++j)
         {
-           if(recomputed_mark[i*M+j] && !diff_done[i]){
+           if(recomputed_mark[i*M+j] && !diff_done[i] && !avoid(i)){
             diff.push(i);
             diff_done[i]=true;
           //   if(new_transition.out_of_domain[i*M+j]!=standard_transition.out_of_domain[i*M+j])

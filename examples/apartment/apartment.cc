@@ -219,6 +219,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   tt.toc();
   std::cout << "Number of new transitions: " << tf_o1d.get_no_transitions() << std::endl;
   dis.update_disturbance(w_3, w3_lb, w3_ub,avoid);
+  
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.recompute_gb(tf_new,online_queue, tf_o1d, w3_lb, w3_ub, rs_repost, avoid);
@@ -231,11 +232,11 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
    std::cout << "\nComputing the stardard transition function globally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.compute_gb(tf_standard,rs_post,avoid);
-  
+  double t2= tt.toc();
  if(!getrusage(RUSAGE_SELF, &usage))
    std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
-  double t2= tt.toc();
+  
   
 
   /* define target set */
@@ -275,9 +276,11 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
-  std::cout << "\nWrite controller to controller.scs \n";
-  if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller_local"))
-    std::cout << "Done. \n";
+  std::vector<double> value=win.get_value();
+  
+  // std::cout << "\nWrite controller to controller.scs \n";
+  // if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller_local"))
+  //   std::cout << "Done. \n";
 
 
     // std::ofstream write;
