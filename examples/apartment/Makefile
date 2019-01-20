@@ -3,7 +3,7 @@
 #
 CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -fopenmp -O0 -DNDEBUG -g -o speed
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -fopenmp -O3 -DNDEBUG -g -o speed
 #CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 
@@ -12,7 +12,7 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-Eigen            = -I /local/home/baiyunjun/Downloads/eigen-eigen-323c052e1731
+Eigen            = -I /opt/local
 
 .PHONY: apartment
 

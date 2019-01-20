@@ -168,6 +168,7 @@ public:
     
     /* radius of hyper interval containing the attainable set */
     state_type eta;
+
     /* state and input variables */
     /* variables for managing the region */
       std::vector<abs_type> lb(dim);  /* lower-left corner */
@@ -194,7 +195,8 @@ public:
      */
     /* loop over all cells */
    
-    #pragma omp parallel for num_threads(10)
+    #pragma omp parallel for simd num_threads(200)
+    
     for(abs_type i=0; i<N; i++) {
 
       if(avoid(i)) {
@@ -680,8 +682,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
         continue;
       }
       /* loop over all inputs */
-      #pragma omp parallel 
-      #pragma omp single 
+      #pragma omp parallel for
       for(abs_type j=0; j<M; j++){
         state_type x;
         input_type u;
@@ -775,7 +776,7 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
           }
             /* increment number of transitions by number of post */
            new_transition.m_no_post[q*M+j]=npost;
-           #pragma omp task
+           
           if(out_of_region[q] && intersection_with_region){
             //q_neighour(q, dim, recompute_queue,recomputed_mark,NN, N);
             conn++;
@@ -786,7 +787,9 @@ template<class F2, class F3, class F4=decltype(params::avoid_abs)>
               {
                 neighbours += cc_neighbours[i][k]*NN[k];
               }
+              #pragma omp critical
               if(neighbours < N && !recomputed_mark[neighbours*M+j]){
+
                 recompute_queue.push(neighbours);
                 recomputed_mark[neighbours*M+j]=true;
                 input_todo[neighbours*M+j]=true;        
