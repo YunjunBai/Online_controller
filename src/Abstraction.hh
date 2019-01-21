@@ -61,10 +61,11 @@ private:
       return;
     if(((double)i/(double)N*100)>=counter){
       if((counter%10)==0)
-        std::cout << counter;
+        std::cout << counter<< "\n";
       else if((counter%2)==0) 
         std::cout << ".";
       counter++;
+      std::cout << "thread(" << omp_get_thread_num() << "): " ;
     }
     std::flush(std::cout); 
     if(i==(N-1))
@@ -195,8 +196,7 @@ public:
      */
     /* loop over all cells */
    
-    #pragma omp parallel for simd num_threads(200)
-    
+    #pragma omp parallel for  shared(counter)
     for(abs_type i=0; i<N; i++) {
 
       if(avoid(i)) {
