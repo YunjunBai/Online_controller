@@ -50,12 +50,11 @@ int main() {
   /* construct grid for the state space */
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* grid node distance diameter */
-  /* optimized values computed according to doi: 10.1109/CDC.2015.7403185 */
-  state_type s_eta={{1.5,1.5,1.5,10*M_PI/180,10*M_PI/180,10*M_PI/180,0.5,0.5,0.5,2*M_PI/180,2*M_PI/180,2*M_PI/180}}; 
+  state_type s_eta={{1.5,1.5,1.5,20*M_PI/180,20*M_PI/180,20*M_PI/180,1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
   /* lower bounds of the hyper rectangle */
-  state_type s_lb={{0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
+  state_type s_lb={{-2.5,-2.5,-2.5,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,-2,-2,-2,-10*M_PI/180,-10*M_PI/180,-10*M_PI/180}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{3,3,3,60*M_PI/180,60*M_PI/180,60*M_PI/180,1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
+  state_type s_ub={{2,2,2,60*M_PI/180,60*M_PI/180,60*M_PI/180,2,2,2,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -74,8 +73,8 @@ int main() {
   scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
   
 
-  disturbance_type w_1={.108,0.002,0,0,0,0,0.0001,0,0,0,0,0};
-  disturbance_type w_2={0.203, 0.001, 0.001,0,0,0,0,0,0,0,0,0};
+  disturbance_type w_1={.108,0.2,0,0,0,0,0.1,0,0,0,0,0};
+  disturbance_type w_2={0.203, 0.1, 0.1,0,0,0,0,0,0,0,0,0};
   disturbance_type w2_lb={0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0};
   disturbance_type w2_ub={1,1,1,0,0,0,1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180};
 
@@ -148,6 +147,8 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
+    //std::cout<<"test test x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<" "<<x[4]<<" "<<x[5]<<" "<<x[6]<<" "<<x[7]<<" "<<x[8]<<" "<<x[9]<<" "<<x[10]<<" "<<x[11]<<std::endl;
+    //std::cout<<"test test r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" "<<r[3]<<" "<<r[4]<<" "<<r[5]<<" "<<r[6]<<" "<<r[7]<<" "<<r[8]<<" "<<r[9]<<" "<<r[10]<<" "<<r[11]<<std::endl;
       r_es=ge.gb_estimate(r,u);
     disturbance_type w = dis.get_disturbance(x,r_es); 
    
