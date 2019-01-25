@@ -200,7 +200,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::TransitionFunction tf_o1d;
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   std::queue<abs_type> online_queue; 
 
   
@@ -310,11 +310,12 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
 }
 int  main()
 {
- 
+  /*
   for (int k = 0; k < 39; ++k)
   {
-    
       main_parameters(k);
   }
-  return 1;
+  */
+  main_parameters(20);
+  return 0;
 }

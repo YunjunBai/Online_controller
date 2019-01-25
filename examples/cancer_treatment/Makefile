@@ -5,7 +5,7 @@
 #
 CC        = g++ 
 #CC       	  = clang++
-CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g
+CXXFLAGS 		= -Wall -Wextra -std=c++11 -O3 -DNDEBUG -g -fopenmp
 #CXXDEBUG		= -Wall -Wextra -std=c++11 
 #
 # scots 
@@ -14,7 +14,7 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-Eigen            = -I/opt/local
+Eigen            = -I/opt/local -I/usr/include/eigen3
 
 .PHONY: cancer_treatment
 

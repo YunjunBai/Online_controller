@@ -240,7 +240,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::TransitionFunction tf_o1d;
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post, avoid);

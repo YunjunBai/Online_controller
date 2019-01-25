@@ -6,6 +6,8 @@ examples/apartment/apartment
 examples/cancer_treatment/cancer_treatment
 examples/manipulator/manipulator
 examples/quadcopter/quadcopter
+examples/quadcopter_12d/quadcopter_12d
+examples/quadcopter_12d_test/quadcopter_12d_test
 examples/simple/simple
 examples/simple/simple_2
 examples/test/test

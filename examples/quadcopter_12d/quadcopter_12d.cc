@@ -70,7 +70,7 @@ int main() {
   is.print_info();
 
   /* setup object to compute the transition function */
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   
 
   disturbance_type w_1={.108,0.2,0,0,0,0,0.1,0,0,0,0,0};

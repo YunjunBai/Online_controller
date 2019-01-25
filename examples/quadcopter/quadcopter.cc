@@ -71,7 +71,7 @@ int main() {
   is.print_info();
 
   /* setup object to compute the transition function */
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   /* measurement disturbances  */
   state_type z={{0.05,0.05,0.05,0.0025/180*M_PI,0.0025/180*M_PI,0.0025/180*M_PI}};
   abs.set_measurement_error_bound(z);

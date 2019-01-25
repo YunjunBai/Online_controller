@@ -13,12 +13,17 @@
 #include <cstring>
 #include <memory>
 #include <vector>
+#include <array>
+#include <tuple>
+#include <chrono>
+#include <thread>
+#include <atomic>
 #include "UniformGrid.hh"
 #include "TransitionFunction.hh"
 #include "Disturbance.hh"
 #include "InputOutput.hh"
 
-#define CHUNK_SIZE 100
+#define CHUNK_SIZE 50
 
 /** @namespace scots **/ 
 namespace scots {
@@ -46,15 +51,21 @@ namespace scots {
      * - http://arxiv.org/abs/1503.03715 for theoretical background 
      *
      **/
-    template<class state_type, class input_type, class ds_type>
+    template<std::size_t state_dim, std::size_t input_dim>
         class Abstraction:public TransitionFunction {
+
+            using state_type = std::array<double,state_dim>;
+            using disturbance_type = std::array<double, state_dim>;
+            using input_type = std::array<double,input_dim>;
+            using ds_type = std::array<double, 2*state_dim>;
+
             private:
                 /* grid information of state alphabet */
                 const UniformGrid m_state_alphabet;
                 /* grid information of input alphabet */
                 const UniformGrid m_input_alphabet;
                 /* measurement error bound */
-                std::unique_ptr<double[]> m_z;
+                std::array<double,state_dim> m_z;
                 /* print progress to the console (default m_verbose=true) */
                 bool m_verbose=true;
 
@@ -62,8 +73,6 @@ namespace scots {
                 const abs_type N; 
                 /* number of inputs */
                 const abs_type M; 
-                /* state space dimension */
-                const int dim;
                 /* some grid information */
                 const std::vector<abs_type> NN;
                 /* radius of hyper interval containing the attainable set */
@@ -120,10 +129,10 @@ namespace scots {
 #pragma omp parallel
                     {
                         /* variables for managing the region */
-                        std::vector<abs_type> lb(dim);  /* lower-left corner */
-                        std::vector<abs_type> ub(dim);  /* upper-right corner */
-                        std::vector<abs_type> no(dim);  /* number of cells per dim */
-                        std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+                        std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                        std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                        std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                        std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
                         /* second loop: fill pre array */
 #pragma omp for schedule(dynamic, CHUNK_SIZE)
                         for(abs_type i=0; i<N; i++) {
@@ -138,7 +147,7 @@ namespace scots {
                                 abs_type npost=1;
 
                                 /* cell idx to coordinates */
-                                for(int k=dim-1; k>=0; k--) {
+                                for(int k=state_dim-1; k>=0; k--) {
                                     /* integer coordinate of lower left corner */
                                     lb[k]=k_lb/NN[k];
                                     k_lb=k_lb-lb[k]*NN[k];
@@ -154,10 +163,10 @@ namespace scots {
 
                                 for(abs_type k=0; k<npost; k++) {
                                     abs_type q=0;
-                                    for(int l=0; l<dim; l++) 
+                                    for(std::size_t l=0; l<state_dim; l++) 
                                         q+=(lb[l]+cc[l])*NN[l];
                                     cc[0]++;
-                                    for(int l=0; l<dim-1; l++) {
+                                    for(std::size_t l=0; l<state_dim-1; l++) {
                                         if(cc[l]==no[l]) {
                                             cc[l]=0;
                                             cc[l+1]++;
@@ -183,17 +192,17 @@ namespace scots {
                     const abs_type i,
                     const abs_type j,
                     const abs_type npost,
-                    std::vector<abs_type> & lb,
-                    std::vector<abs_type> & no,
-                    std::vector<abs_type> & cc)
+                    std::array<abs_type,state_dim> & lb,
+                    std::array<abs_type,state_dim> & no,
+                    std::array<abs_type,state_dim> & cc)
                 {
                     /* compute indices of post */
                     for(abs_type k=0; k<npost; k++) {
                         abs_type q=0;
-                        for(int l=0; l<dim; l++) 
+                        for(std::size_t l=0; l<state_dim; l++) 
                             q+=(lb[l]+cc[l])*NN[l];
                         cc[0]++;
-                        for(int l=0; l<dim-1; l++) {
+                        for(std::size_t l=0; l<state_dim-1; l++) {
                             if(cc[l]==no[l]) {
                                 cc[l]=0;
                                 cc[l+1]++;
@@ -218,22 +227,22 @@ namespace scots {
                     ds_type & y,
                     state_type & r,
                     abs_type & npost,
-                    std::vector<abs_type> & lb,
-                    std::vector<abs_type> & ub,
-                    std::vector<abs_type> & no,
-                    std::vector<abs_type> & cc)
+                    std::array<abs_type,state_dim> & lb,
+                    std::array<abs_type,state_dim> & ub,
+                    std::array<abs_type,state_dim> & no,
+                    std::array<abs_type,state_dim> & cc)
                 {
-                    for (int k = 0; k<dim; ++k)
+                    for (std::size_t k = 0; k<state_dim; ++k)
                     {
                         x[k]=y[k];
-                        r[k]=y[k+dim];
+                        r[k]=y[k+state_dim];
                     }
                     /* determine the cells which intersect with the attainable set: 
                      * discrete hyper interval of cell indices 
-                     * [lb[0]; ub[0]] x .... x [lb[dim-1]; ub[dim-1]]
+                     * [lb[0]; ub[0]] x .... x [lb[state_dim-1]; ub[dim-1]]
                      * covers attainable set 
                      */
-                    for(int k=0; k<dim; k++) {
+                    for(std::size_t k=0; k<state_dim; k++) {
                         /* check for out of bounds */
                         double left = x[k]-r[k]-m_z[k];
                         double right = x[k]+r[k]+m_z[k];
@@ -274,18 +283,17 @@ namespace scots {
                         const UniformGrid& input_alphabet) :
                     m_state_alphabet(state_alphabet),
                     m_input_alphabet(input_alphabet),
-                    m_z(new double[state_alphabet.get_dim()]()),
+                    m_z(),
                     N(state_alphabet.size()),
                     M(input_alphabet.size()),
-                    dim(state_alphabet.get_dim()),
                     NN(state_alphabet.get_nn())
                     {
                         /* default value of the measurement error 
                          * (heurisitc to prevent rounding errors)*/
-                        for(int i=0; i<m_state_alphabet.get_dim(); i++)
+                        for(std::size_t i=0; i<state_dim; i++)
                             m_z[i]=m_state_alphabet.get_eta()[i]/1e10;
                         /* copy data from m_state_alphabet */
-                        for(int i=0; i<dim; i++) {
+                        for(std::size_t i=0; i<state_dim; i++) {
                             eta[i]=m_state_alphabet.get_eta()[i];
                             lower_left[i]=m_state_alphabet.get_lower_left()[i];
                             upper_right[i]=m_state_alphabet.get_upper_right()[i];
@@ -350,10 +358,10 @@ namespace scots {
                             ds_type y;
                             state_type r; 
                             /* variables for managing the region */
-                            std::vector<abs_type> lb(dim);  /* lower-left corner */
-                            std::vector<abs_type> ub(dim);  /* upper-right corner */
-                            std::vector<abs_type> no(dim);  /* number of cells per dim */
-                            std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+                            std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                            std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                            std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                            std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
 
 #pragma omp for schedule(dynamic, CHUNK_SIZE)
                             for(abs_type i=0; i<N; i++) {
@@ -372,10 +380,10 @@ namespace scots {
                                     /* get center x of cell */
                                     m_state_alphabet.itox(i,x);
                                     /* cell radius (including measurement errors) */
-                                    for(int k=0; k<dim; k++){
+                                    for(std::size_t k=0; k<state_dim; k++){
                                         r[k]=eta[k]/2.0+m_z[k];
                                         y[k]=x[k];
-                                        y[k+dim]=r[k];
+                                        y[k+state_dim]=r[k];
                                     }
 
                                     /* current input */
@@ -424,14 +432,14 @@ namespace scots {
                         /* initialize return value */
                         std::vector<state_type> post {};
                         /* variables for managing the post */
-                        std::vector<abs_type> lb(dim);  /* lower-left corner */
-                        std::vector<abs_type> ub(dim);  /* upper-right corner */
-                        std::vector<abs_type> no(dim);  /* number of cells per dim */
-                        std::vector<abs_type> cc(dim);  /* coordinate of current cell in the post */
+                        std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                        std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                        std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                        std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
                         /* get radius */
                         state_type r;
                         /* fill in data */
-                        for(int i=0; i<dim; i++) {
+                        for(int i=0; i<state_dim; i++) {
                             r[i]=m_state_alphabet.get_eta()[i]/2.0+m_z[i];
                         }
                         state_type xx=x;
@@ -441,7 +449,7 @@ namespace scots {
 
                         /* determine post */
                         abs_type npost=1;
-                        for(int k=0; k<dim; k++) {
+                        for(int k=0; k<state_dim; k++) {
                             /* check for out of bounds */
                             double left = xx[k]-r[k]-m_z[k];
                             double right = xx[k]+r[k]+m_z[k];
@@ -461,11 +469,11 @@ namespace scots {
                         /* compute indices of post */
                         for(abs_type k=0; k<npost; k++) {
                             abs_type q=0;
-                            for(int l=0; l<dim; l++)  {
+                            for(int l=0; l<state_dim; l++)  {
                                 q+=(lb[l]+cc[l])*NN[l];
                             }
                             cc[0]++;
-                            for(int l=0; l<dim-1; l++) {
+                            for(int l=0; l<state_dim-1; l++) {
                                 if(cc[l]==no[l]) {
                                     cc[l]=0;
                                     cc[l+1]++;
@@ -569,19 +577,21 @@ namespace scots {
                         /* for display purpose */
                         abs_type counter=0;
                         /* variables for managing the region */
-                        std::vector<abs_type> lb(dim);  /* lower-left corner */
-                        std::vector<abs_type> ub(dim);  /* upper-right corner */
-                        std::vector<abs_type> no(dim);  /* number of cells per dim */
-                        std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+                        std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                        std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                        std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                        std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
 
                         /* init in transition_function the members no_pre, no_post, pre_ptr */ 
                         new_transition.init_infrastructure(N,M);
                         /* lower-left & upper-right corners of hyper rectangle of cells that cover attainable set */
                         /* make if a states recompute or not.*/
-                        std::unique_ptr<bool[]> recomputed_mark(new bool[N*M]()); //TODO as atomic_flag
-                        std::unique_ptr<bool[]> input_todo(new bool[N*M]());
+                        std::unique_ptr<std::atomic_flag[]> recomputed_mark(new std::atomic_flag[N*M]());
+                        for (abs_type i = 0; i < N*M; i++) {
+                            recomputed_mark[i].clear(); //ATOMIC_FLAG_INIT;
+                        }
                         /*contain the states which need to recompute*/
-                        std::queue<abs_type> recompute_queue; 
+                        std::queue<std::pair<abs_type,abs_type>> recompute_queue; 
                         std::vector<bool> out_of_region(N, true); 
                         std::vector<bool> diff_done(N,false);
 
@@ -597,13 +607,13 @@ namespace scots {
                         /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
                         abs_type nNRegion=1;
 
-                        for (int i = 0; i < dim; ++i)
+                        for (std::size_t i = 0; i < state_dim; ++i)
                         {
                             tmp.push_back(num[0]);
                         }
                         cc_neighbours.push_back(tmp);
 
-                        for (int i = dim-1; i>=0; i--)
+                        for (int i = state_dim-1; i>=0; i--)
                         {
                             int ncc=cc_neighbours.size();
                             for (int k = 1; k < 3; ++k)
@@ -618,7 +628,7 @@ namespace scots {
                         }
                         int ncc = cc_neighbours.size();
 
-                        for(int k=0; k<dim; k++) {
+                        for(std::size_t k=0; k<state_dim; k++) {
                             /* check for out of bounds */
                             double left = d_lb[k]-eta[k]-m_z[k];
                             double right = d_ub[k]+eta[k]+m_z[k];
@@ -641,25 +651,23 @@ namespace scots {
                         /* compute indices of Region */
                         for(abs_type k=0; k<nNRegion; k++) {
                             abs_type q=0;
-                            for(int l=0; l<dim; l++)  {
+                            for(std::size_t l=0; l<state_dim; l++)  {
                                 q+=(lb[l]+cc[l])*m_state_alphabet.get_nn()[l];
                             }
                             cc[0]++;
-                            for(int l=0; l<dim-1; l++) {
+                            for(std::size_t l=0; l<state_dim-1; l++) {
                                 if(cc[l]==no[l]) {
                                     cc[l]=0;
                                     cc[l+1]++;
                                 }
                             }
                             for(abs_type j=0; j<M; j++){
-                                if (!recomputed_mark[q*M+j]){
-                                    recompute_queue.push(q);
-                                    recomputed_mark[q*M+j]=true;
-                                    input_todo[q*M+j]=true;
-
+                                bool already_done = recomputed_mark[q*M+j].test_and_set();
+                                if (!already_done){
+                                    recompute_queue.emplace(q,j);
                                 }
                             }     
-                            if(region(q,d_lb,d_ub,dim,eta))
+                            if(region(q,d_lb,d_ub,eta))
                                 out_of_region[q]=false;  
                         }
                         std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
@@ -669,44 +677,76 @@ namespace scots {
                         abs_type coun=0;
                         /*start big loop untill the recompute_queue become empty*/
 
-                        while(!recompute_queue.empty())
-                        {
-                            abs_type q = recompute_queue.front(); 
-                            recompute_queue.pop();
-                            /* q is a state which needs to recompute transitions, post of q*/
-                            coun++;
+                        //numbers of thread currently working
+                        int workers = 0;
 
-                            /* is q an element of the avoid symbols ? */
-                            if(avoid(q)) {
-                                for(abs_type j=0; j<M; j++) {
-                                    new_transition.out_of_domain[q*M+j]=true;
-                                }
-                                continue;
-                            }
-                            /* loop over all inputs */
 #pragma omp parallel
-                            {
-                                state_type x;
-                                input_type u;
-                                ds_type y;
-                                state_type r; 
-                                /* variables for managing the region */
-                                std::vector<abs_type> lb(dim);  /* lower-left corner */
-                                std::vector<abs_type> ub(dim);  /* upper-right corner */
-                                std::vector<abs_type> no(dim);  /* number of cells per dim */
-                                std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
-#pragma omp for
-                                for(abs_type j=0; j<M; j++){
-                                    //new_transition.out_of_domain[q*M+j]=false;
-                                    if(input_todo[q*M+j]){
-                                        input_todo[q*M+j]=false;
+                        {
+                            state_type x;
+                            input_type u;
+                            ds_type y;
+                            state_type r; 
+                            /* variables for managing the region */
+                            std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                            std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                            std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                            std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
+                            int chunk = 0;
+                            std::array<abs_type,CHUNK_SIZE> work_list_states;
+                            std::array<abs_type,CHUNK_SIZE> work_list_inputs;
+                            bool working = true;
+                            int new_chunk = 0;
+                            std::array<abs_type,CHUNK_SIZE> new_work_list_states;
+                            std::array<abs_type,CHUNK_SIZE> new_work_list_inputs;
+
+#pragma omp atomic
+                            workers++;
+
+                            //as long as we have busy workers
+                            while(workers > 0) {
+                                //get a chuck of states to work on
+#pragma omp critical
+                                {
+                                    while(chunk < CHUNK_SIZE && !recompute_queue.empty()) {
+                                        work_list_states[chunk] = std::get<0>(recompute_queue.front());
+                                        work_list_inputs[chunk] = std::get<1>(recompute_queue.front()); 
+                                        recompute_queue.pop();
+                                        chunk++;
+                                    }
+                                    coun += chunk;
+                                }
+
+                                if (chunk == 0) {
+                                    //no more work, says you are done
+                                    working = false;
+#pragma omp atomic
+                                    workers--;
+                                    //wait a bit, someone else might still be busy and will enqueue new states
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                                } else {
+                                    if (!working) {
+                                        //back to work!
+                                        working = true;
+#pragma omp atomic
+                                        workers++;
+                                    }
+                                    for (int i = 0; i < chunk; i++) {
+                                        abs_type q = work_list_states[i];
+                                        abs_type j = work_list_inputs[i];
+                                        /* is q an element of the avoid symbols ? */
+                                        if(avoid(q)) {
+                                            for(abs_type j=0; j<M; j++) {
+                                                new_transition.out_of_domain[q*M+j]=true;
+                                            }
+                                            continue;
+                                        }
                                         /* get center x of cell */
                                         m_state_alphabet.itox(q,x);
                                         /* cell radius (including measurement errors) */
-                                        for(int k=0; k<dim; k++){
+                                        for(std::size_t k=0; k<state_dim; k++){
                                             r[k]=eta[k]/2.0+m_z[k];
                                             y[k]=x[k];
-                                            y[k+dim]=r[k];
+                                            y[k+state_dim]=r[k];
                                         }
 
                                         /* current input */
@@ -728,38 +768,55 @@ namespace scots {
 
                                         /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
                                         if(out_of_region[q] && intersection_with_region){
-                                            //q_neighour(q, dim, recompute_queue,recomputed_mark,NN, N);
                                             conn++;
                                             for (int i = 0; i < ncc; ++i)
                                             {
                                                 abs_type neighbours=q;
-                                                for (int k = 0; k<dim; ++k)
+                                                for (std::size_t k = 0; k<state_dim; ++k)
                                                 {
                                                     neighbours += cc_neighbours[i][k]*NN[k];
                                                 }
-#pragma omp critical
-                                                if(neighbours < N && !recomputed_mark[neighbours*M+j]){
-                                                    recompute_queue.push(neighbours);
-                                                    recomputed_mark[neighbours*M+j]=true;
-                                                    input_todo[neighbours*M+j]=true;        
+                                                if(neighbours < N) {
+                                                    bool already_done = recomputed_mark[neighbours*M+j].test_and_set();
+                                                    if (!already_done){
+                                                        new_work_list_states[new_chunk] = neighbours;
+                                                        new_work_list_inputs[new_chunk] = j;
+                                                        new_chunk++;
+                                                        //about to overflow the new work list
+                                                        if (new_chunk == CHUNK_SIZE) {
+                                                            #pragma omp critical
+                                                            for (int i = 0; i < new_chunk; i++) {
+                                                                recompute_queue.emplace(new_work_list_states[i],new_work_list_inputs[i]);
+                                                            }
+                                                            new_chunk = 0;
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }  
                                     }
-
-
-                                } // end for
-                            } // end parallel
+                                    chunk = 0;
+                                    //put new stuff in the work queue
+                                    #pragma omp critical
+                                    for (int i = 0; i < new_chunk; i++) {
+                                        recompute_queue.emplace(new_work_list_states[i],new_work_list_inputs[i]);
+                                    }
+                                    new_chunk = 0;
+                                }
+                            }
+                        } // end parallel
+                        
+                        std::unique_ptr<bool[]> recomputed(new bool[N*M]());
+                        for (abs_type i = 0; i < N*M; i++) {
+                            recomputed[i] = recomputed_mark[i].test_and_set();
                         }
-
-                        std::cout<<"recomputing transitions until queue empty";
-                        std::cout<<"total percent " <<coun<<std::endl;
+                        std::cout<<"total " <<coun<<std::endl;
                         /*copy from old transtions*/
                         for(abs_type i = 0; i < N; ++i )
                         { 
                             for (abs_type j = 0; j < M; ++j)
                             {
-                                if(recomputed_mark[i*M+j] && !diff_done[i] && !avoid(i)){
+                                if(recomputed[i*M+j] && !diff_done[i] && !avoid(i)){
                                     diff.push(i);
                                     diff_done[i]=true;
                                 }
@@ -777,10 +834,10 @@ namespace scots {
 #pragma omp parallel
                         {
                             /* variables for managing the region */
-                            std::vector<abs_type> lb(dim);  /* lower-left corner */
-                            std::vector<abs_type> ub(dim);  /* upper-right corner */
-                            std::vector<abs_type> no(dim);  /* number of cells per dim */
-                            std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+                            std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                            std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                            std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                            std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
                             /* second loop: fill pre array */
 #pragma omp for schedule(dynamic, CHUNK_SIZE)
                             for(abs_type i=0; i<N; i++) {
@@ -795,7 +852,7 @@ namespace scots {
                                     abs_type npost=1;
 
                                     /* cell idx to coordinates */
-                                    for(int k=dim-1; k>=0; k--) {
+                                    for(int k=state_dim-1; k>=0; k--) {
                                         /* integer coordinate of lower left corner */
                                         lb[k]=k_lb/NN[k];
                                         k_lb=k_lb-lb[k]*NN[k];
@@ -811,10 +868,10 @@ namespace scots {
 
                                     for(abs_type k=0; k<npost; k++) {
                                         abs_type q=0;
-                                        for(int l=0; l<dim; l++) 
+                                        for(std::size_t l=0; l<state_dim; l++) 
                                             q+=(lb[l]+cc[l])*NN[l];
                                         cc[0]++;
-                                        for(int l=0; l<dim-1; l++) {
+                                        for(std::size_t l=0; l<state_dim-1; l++) {
                                             if(cc[l]==no[l]) {
                                                 cc[l]=0;
                                                 cc[l+1]++;
@@ -835,15 +892,15 @@ namespace scots {
 
                         fill_pre(new_transition);
 
-                        write_to_filebb(m_state_alphabet,m_input_alphabet,recomputed_mark,"recomputation_lazy");
+                        write_to_filebb(m_state_alphabet, m_input_alphabet, recomputed,"recomputation_lazy");
 
                     }//function closed
 
-                bool region(abs_type q,state_type d_lb,state_type d_ub, int dim, state_type eta){
+                bool region(abs_type q,state_type d_lb, state_type d_ub, state_type eta){
                     state_type x;
                     m_state_alphabet.itox(q,x);
                     bool belong=true;
-                    for(int i=0; i<dim; i++){
+                    for(std::size_t i=0; i<state_dim; i++){
                         if (d_lb[i]-eta[i]/2.0 > x[i] || x[i] > d_ub[i]+eta[i]/2.0)
                             belong = false;
                     }
@@ -865,10 +922,10 @@ namespace scots {
                         /* for display purpose */
                         abs_type counter=0;
                         /* variables for managing the region */
-                        std::vector<abs_type> lb(dim);  /* lower-left corner */
-                        std::vector<abs_type> ub(dim);  /* upper-right corner */
-                        std::vector<abs_type> no(dim);  /* number of cells per dim */
-                        std::vector<abs_type> cc(dim);  /* coordinate of current cell in the region */
+                        std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                        std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                        std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                        std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
                         /* radius of hyper interval containing the attainable set */
                         state_type r;
                         /* state and input variables */
@@ -879,7 +936,7 @@ namespace scots {
                         state_type re_lb;
                         state_type re_ub;
                         /* copy data from m_state_alphabet */
-                        for(int i=0; i<dim; i++) {
+                        for(std::size_t i=0; i<state_dim; i++) {
                             re_lb[i]=std::max(d_lb[i]-distance[i],lower_left[i]);
                             re_ub[i]=std::min(d_ub[i]+distance[i],upper_right[i]);
                         }
@@ -900,7 +957,7 @@ namespace scots {
                         /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
                         abs_type nNRegion=1;
 
-                        for(int k=0; k<dim; k++) {
+                        for(std::size_t k=0; k<state_dim; k++) {
                             /* check for out of bounds */
                             double left = re_lb[k]-m_z[k];
                             double right = re_ub[k]+m_z[k];
@@ -923,11 +980,11 @@ namespace scots {
                         /* compute indices of Region */
                         for(abs_type k=0; k<nNRegion; k++) {
                             abs_type q=0;
-                            for(int l=0; l<dim; l++)  {
+                            for(std::size_t l=0; l<state_dim; l++)  {
                                 q+=(lb[l]+cc[l])*m_state_alphabet.get_nn()[l];
                             }
                             cc[0]++;
-                            for(int l=0; l<dim-1; l++) {
+                            for(std::size_t l=0; l<state_dim-1; l++) {
                                 if(cc[l]==no[l]) {
                                     cc[l]=0;
                                     cc[l+1]++;
@@ -965,10 +1022,10 @@ namespace scots {
                                 /* get center x of cell */
                                 m_state_alphabet.itox(q,x);
                                 /* cell radius (including measurement errors) */
-                                for(int k=0; k<dim; k++){
+                                for(std::size_t k=0; k<state_dim; k++){
                                     r[k]=eta[k]/2.0+m_z[k];
                                     y[k]=x[k];
-                                    y[k+dim]=r[k];
+                                    y[k+state_dim]=r[k];
                                 }
 
                                 /* current input */
@@ -979,19 +1036,19 @@ namespace scots {
                                 rs_post(y,u); //todo
 
                                 /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
-                                for (int k = 0; k<dim; ++k)
+                                for (std::size_t k = 0; k<state_dim; ++k)
                                 {
                                     x[k] = y[k];
-                                    r[k] = y[k+dim];
+                                    r[k] = y[k+state_dim];
                                 }
                                 /* determine the cells which intersect with the attainable set: 
                                  * discrete hyper interval of cell indices 
-                                 * [lb[0]; ub[0]] x .... x [lb[dim-1]; ub[dim-1]]
+                                 * [lb[0]; ub[0]] x .... x [lb[state_dim-1]; ub[dim-1]]
                                  * covers attainable set 
                                  */
 
                                 abs_type npost=1;
-                                for(int k=0; k<dim; k++) {
+                                for(std::size_t k=0; k<state_dim; k++) {
                                     /* check for out of bounds */
                                     double left = x[k]-r[k]-m_z[k];
                                     double right = x[k]+r[k]+m_z[k];
@@ -1018,10 +1075,10 @@ namespace scots {
                                 /* compute indices of post */
                                 for(abs_type k=0; k<npost; k++) {
                                     abs_type p=0;
-                                    for(int l=0; l<dim; l++) 
+                                    for(std::size_t l=0; l<state_dim; l++) 
                                         p+=(lb[l]+cc[l])*NN[l];
                                     cc[0]++;
-                                    for(int l=0; l<dim-1; l++) {
+                                    for(std::size_t l=0; l<state_dim-1; l++) {
                                         if(cc[l]==no[l]) {
                                             cc[l]=0;
                                             cc[l+1]++;
@@ -1079,7 +1136,7 @@ namespace scots {
                                 abs_type npost=1;
 
                                 /* cell idx to coordinates */
-                                for(int k=dim-1; k>=0; k--) {
+                                for(int k=state_dim-1; k>=0; k--) {
                                     /* integer coordinate of lower left corner */
                                     lb[k]=k_lb/NN[k];
                                     k_lb=k_lb-lb[k]*NN[k];
@@ -1096,10 +1153,10 @@ namespace scots {
 
                                 for(abs_type k=0; k<npost; k++) {
                                     abs_type p=0;
-                                    for(int l=0; l<dim; l++) 
+                                    for(std::size_t l=0; l<state_dim; l++) 
                                         p+=(lb[l]+cc[l])*NN[l];
                                     cc[0]++;
-                                    for(int l=0; l<dim-1; l++) {
+                                    for(std::size_t l=0; l<state_dim-1; l++) {
                                         if(cc[l]==no[l]) {
                                             cc[l]=0;
                                             cc[l+1]++;
@@ -1144,7 +1201,7 @@ namespace scots {
                                 abs_type npost=1;
 
                                 /* cell idx to coordinates */
-                                for(int k=dim-1; k>=0; k--) {
+                                for(int k=state_dim-1; k>=0; k--) {
                                     /* integer coordinate of lower left corner */
                                     lb[k]=k_lb/NN[k];
                                     k_lb=k_lb-lb[k]*NN[k];
@@ -1160,10 +1217,10 @@ namespace scots {
 
                                 for(abs_type k=0; k<npost; k++) {
                                     abs_type p=0;
-                                    for(int l=0; l<dim; l++) 
+                                    for(std::size_t l=0; l<state_dim; l++) 
                                         p+=(lb[l]+cc[l])*NN[l];
                                     cc[0]++;
-                                    for(int l=0; l<dim-1; l++) {
+                                    for(std::size_t l=0; l<state_dim-1; l++) {
                                         if(cc[l]==no[l]) {
                                             cc[l]=0;
                                             cc[l+1]++;

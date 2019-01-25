@@ -223,7 +223,8 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub](ds_type &y, input_type &u, bool &neigbou
   scots::TransitionFunction tf_o1d;
   scots::TransitionFunction tf_new;
   scots::TransitionFunction tf_standard;
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
+  std::queue<abs_type> online_queue;
   //dis.update_disturbance(w_2, w2_lb, w2_ub);
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post);
@@ -237,7 +238,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub](ds_type &y, input_type &u, bool &neigbou
    // dis.update_disturbance(w_3, w3_lb, w3_ub);
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,tf_o1d, w3_lb, w3_ub, rs_repost);
+  abs.recompute_gb(tf_new, online_queue, tf_o1d, w3_lb, w3_ub, rs_repost);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;

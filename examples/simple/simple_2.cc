@@ -158,7 +158,7 @@ int main() {
  
   scots::TransitionFunction tf_nfr;
  
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   
  
   //dis.update_disturbance(w_2, w2_lb, w2_ub);
