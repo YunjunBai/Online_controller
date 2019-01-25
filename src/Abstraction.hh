@@ -210,7 +210,9 @@ namespace scots {
                         }
                         /* (i,j,q) is a transition */    
                         /* increment number of pres for (q,j) */ 
-                        transition_function.m_no_pre[q*M+j]++; //FIXME a datarace here ??
+                        abs_type index = q*M+j;
+                        #pragma omp atomic
+                        transition_function.m_no_pre[index]++;
                         /* store id's of lower-left and upper-right cell */
                         if(k==0)
                             transition_function.corner_IDs[i*(2*M)+2*j]=q;
