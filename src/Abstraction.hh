@@ -210,7 +210,7 @@ namespace scots {
                         }
                         /* (i,j,q) is a transition */    
                         /* increment number of pres for (q,j) */ 
-                        transition_function.m_no_pre[q*M+j]++;
+                        transition_function.m_no_pre[q*M+j]++; //FIXME a datarace here ??
                         /* store id's of lower-left and upper-right cell */
                         if(k==0)
                             transition_function.corner_IDs[i*(2*M)+2*j]=q;
@@ -1178,7 +1178,7 @@ namespace scots {
                         abs_ptr_type sum=0;
                         for(abs_type i=0; i<N; i++) {
                             for(abs_type j=0; j<M; j++) {
-                                sum+=new_transition_com.m_no_pre[i*M+j];
+                                sum += new_transition_com.m_no_pre[i*M+j];
                                 new_transition_com.m_pre_ptr[i*M+j]=sum;
                             }
                         }
