@@ -1,0 +1,16 @@
+# scots output
+*.scs
+# test execuables
+examples/aircraft/aircraft
+examples/apartment/apartment
+examples/cancer_treatment/cancer_treatment
+examples/manipulator/manipulator
+examples/quadcopter/quadcopter
+examples/simple/simple
+examples/simple/simple_2
+examples/test/test
+examples/test_2/test_2
+examples/unicycle/unicycle
+examples/vehicle/vehicle
+examples/vehicle_5d/vehicle_5d
+examples/whirlwind/whirlwind
