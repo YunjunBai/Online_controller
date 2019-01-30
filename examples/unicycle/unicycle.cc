@@ -160,7 +160,7 @@ auto rs_repost = [&dis,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbour) -
   std::cout << "Computing the initial transition function (before distrubance changes): " << std::endl;
   /* transition function of symbolic model */
   scots::TransitionFunction tf_o1d,tf_new,tf_standard;
-  scots::Abstraction<state_type,input_type,ds_type> abs(ss,is);
+  scots::Abstraction<state_dim,input_dim> abs(ss,is);
   
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post, avoid);
