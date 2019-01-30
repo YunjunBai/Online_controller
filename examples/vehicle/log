@@ -1,2 +1,0 @@
-g++ -Wall -Wextra -std=c++11 -O3 -DNDEBUG  -g -I../../src -I../../utils vehicle.cc -o vehicle
-Makefile:21: recipe for target 'vehicle' failed

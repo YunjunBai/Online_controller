@@ -14,7 +14,7 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-Eigen            = -I/opt/local
+Eigen            = -I/opt/local -I/usr/include/eigen3
 
 .PHONY: quadcopter
 
