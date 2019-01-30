@@ -8,6 +8,10 @@
 
 /*
  * information about this example is given in
+ "Control and Estimation of a Quadcopter Dynamical Model"
+Sevkuthan KURAK1
+
+FENS, Inernational University of Sarajevo 
  * https://www.kth.se/polopoly_fs/1.588039.1441112632!/Thesis%20KTH%20-%20Francesco%20Sabatino.pdf
  *http://sal.aalto.fi/publications/pdf-files/eluu11_public.pdf
  */
@@ -33,7 +37,7 @@ const int state_dim=12;
 /* input space dim */
 const int input_dim=4;
 /* sampling time */
-const double tau = 0.01;
+const double tau = 0.0002;
 using abs_type = scots::abs_type;
 /* data types of the state space elements and input 
  * space elements used in uniform grid and ode solver */
@@ -50,22 +54,22 @@ int main() {
   /* construct grid for the state space */
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* grid node distance diameter */
-  state_type s_eta={{2,2,2,40*M_PI/180,40*M_PI/180,40*M_PI/180,2,2,2,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
+  state_type s_eta={{2,2,2,30*M_PI/180,30*M_PI/180,30*M_PI/180,0.5,0.5,0.5,0.05,0.05,0.05}}; 
   /* lower bounds of the hyper rectangle */
-  state_type s_lb={{-2.5,-2.5,-2.5,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,-2,-2,-2,-10*M_PI/180,-10*M_PI/180,-10*M_PI/180}};
+  state_type s_lb={{-2.5,-2.5,-2.5,-30*M_PI/180,-30*M_PI/180,-30*M_PI/180,0,0,0,-0.05,-0.05,-0.05}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{2,2,2,60*M_PI/180,60*M_PI/180,60*M_PI/180,2,2,2,10*M_PI/180,10*M_PI/180,10*M_PI/180}}; 
+  state_type s_ub={{2,2,2,30*M_PI/180,30*M_PI/180,30*M_PI/180,1,1,1,0.05,0.05,0.05}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
 
   /* construct grid for the input space */
   /* lower bounds of the hyper rectangle */
-  input_type i_lb={{550,550,550,550}};
+  input_type i_lb={{100,100,100,100}};
   /* upper bounds of the hyper rectangle */
-  input_type i_ub={{675,675,675,675}};
+  input_type i_ub={{2500,2500,2500,2500}};
   /* grid node distance diameter */
-  input_type i_eta={{50,50,50,50}};
+  input_type i_eta={{500,500,500,500}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
@@ -83,38 +87,15 @@ int main() {
    auto l_matrix=[&is](const abs_type& input_id){
     matrix_type L;
     input_type u;
-    double b=2.980*1e-6;
+    double b=54.2 * 1e-6;
     double f_t=b*(u[0]*u[0]+u[1]*u[1]+u[2]*u[2]+u[3]*u[3]);
     is.itox(input_id,u);
-    L[0][3]=1.7597;
-    L[0][4]= 1.3624;
-    L[0][5]=1.3616;
-    L[0][6]=0.9848;
-    L[0][7]= 0.9962;
-    L[0][8]= 0.9627;
-    L[1][3]=1.7597;
-    L[1][4]=1.3624;
-    L[1][5]=1.3616;
-    L[1][6]=0.9848;
-    L[1][7]=0.9962;
-    L[1][8]=0.9627;
-    L[2][4]= -0.0911;
-    L[2][5]=0.9698;
-    L[2][6]= -0.1736;
-    L[2][7]=0.8529;
-    L[2][8]= 0.9698;
-    L[3][4]=0.8550;
-    L[3][5]=0.3438;
-    L[3][10]=1.7321;
-    L[3][11]=1.9696;
-    L[4][5]=-3.1948e-06;
-    L[4][10]= 0.9848;
-    L[4][11]=-0.1736;
-    L[5][4]=0.9873;
-    L[5][5]=0.2977;
-    L[5][9]=1;
-    L[5][10]=1.5;
-    L[5][11]=1.7057;
+    L[0][6]=1;
+    L[1][7]=1;
+    L[2][8]= 1;
+    L[3][9]=1;
+    L[4][10]=1;
+    L[5][11]=1;
     L[6][3]=1.3715*f_t;
     L[6][4]=1.6602*f_t;
     L[6][5]=2.1287*f_t;
@@ -123,21 +104,20 @@ int main() {
     L[7][5]=2.0388*f_t;
     L[8][4]= 1.8224*f_t;
     L[8][5]=1.8224*f_t;
-    L[9][10]= -2.0032e-08;
-    L[9][11]= -2.0032e-08;
+    L[9][10]= 2.0032e-08;
+    L[9][11]= 2.0032e-08;
     L[10][9]=0.1418;
     L[10][11]=0.1418;
-    L[11][9]=0;
-    L[11][10]=0;
    
     return L;
   };
 
   scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
   ge.exp_interals(l_matrix,tau/10);
+  int test_counter=10;
+  auto rs_post = [&dis,&ge,w2_lb,w2_ub,&test_counter](ds_type &y, input_type &u) -> void {
 
-  auto rs_post = [&dis,&ge,w2_lb,w2_ub](ds_type &y, input_type &u) -> void {
-  auto rhs_1 =[&dis, &ge](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs_1 =[&dis, &ge,&test_counter](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
@@ -146,53 +126,36 @@ int main() {
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    //std::cout<<"test test x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<" "<<x[4]<<" "<<x[5]<<" "<<x[6]<<" "<<x[7]<<" "<<x[8]<<" "<<x[9]<<" "<<x[10]<<" "<<x[11]<<std::endl;
-    //std::cout<<"test test r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" "<<r[3]<<" "<<r[4]<<" "<<r[5]<<" "<<r[6]<<" "<<r[7]<<" "<<r[8]<<" "<<r[9]<<" "<<r[10]<<" "<<r[11]<<std::endl;
+    
+    if(test_counter){
+      --test_counter;
+      std::cout<<" test x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<" "<<x[4]<<" "<<x[5]<<" "<<x[6]<<" "<<x[7]<<" "<<x[8]<<" "<<x[9]<<" "<<x[10]<<" "<<x[11]<<std::endl;
+    //std::cout<<" test r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" "<<r[3]<<" "<<r[4]<<" "<<r[5]<<" "<<r[6]<<" "<<r[7]<<" "<<r[8]<<" "<<r[9]<<" "<<r[10]<<" "<<r[11]<<std::endl;
+    }
+    
       r_es=ge.gb_estimate(r,u);
     disturbance_type w = dis.get_disturbance(x,r_es); 
    
-    double m=0.468;
+    double m=0.506;
     double g=9.81;
-    double b=2.980*1e-6;
-    double l=0.225;
-    double d=1.140*1e-7;
-    double I_x=4.856*1e-3;
-    double I_y=4.856*1e-3;
-    double I_z=8.801*1e-3;
+    double b=54.2 * 1e-6;
+    double l=0.24;
+    double d=1.1*1e-6;
+    double I_x=8.1*1e-5;
+    double I_y=8.1*1e-5;
+    double I_z=6.2*1e-5;
     double f_t=b*(u[0]*u[0]+u[1]*u[1]+u[2]*u[2]+u[3]*u[3]);
     double tau_x=b*l*(u[2]*u[2]-u[0]*u[0]);
     double tau_y=b*l*(u[3]*u[3]-u[1]*u[1]);
     double tau_z=d*(u[3]*u[3]+u[1]*u[1]-u[2]*u[2]-u[0]*u[0]);
      double L[12][12];
-    L[0][3]=1.7597;
-    L[0][4]= 1.3624;
-    L[0][5]=1.3616;
-    L[0][6]=0.9848;
-    L[0][7]= 0.9962;
-    L[0][8]= 0.9627;
-    L[1][3]=1.7597;
-    L[1][4]=1.3624;
-    L[1][5]=1.3616;
-    L[1][6]=0.9848;
-    L[1][7]=0.9962;
-    L[1][8]=0.9627;
-    L[2][4]= -0.0911;
-    L[2][5]=0.9698;
-    L[2][6]= -0.1736;
-    L[2][7]=0.8529;
-    L[2][8]= 0.9698;
-    L[3][4]=0.8550;
-    L[3][5]=0.3438;
-    L[3][10]=1.7321;
-    L[3][11]=1.9696;
-    L[4][5]=-3.1948e-06;
-    L[4][10]=  0.9848;
-    L[4][11]=-0.1736;
-    L[5][4]=0.9873;
-    L[5][5]=0.2977;
-    L[5][9]=1;
-    L[5][10]=1.5;
-    L[5][11]=1.7057;
+    
+    L[0][6]=1;
+    L[1][7]=1;
+    L[2][8]= 1;
+    L[3][9]=1;
+    L[4][10]=1;
+    L[5][11]=1;
     L[6][3]=1.3715*f_t;
     L[6][4]=1.6602*f_t;
     L[6][5]=2.1287*f_t;
@@ -201,39 +164,37 @@ int main() {
     L[7][5]=2.0388*f_t;
     L[8][4]= 1.8224*f_t;
     L[8][5]=1.8224*f_t;
-    L[9][10]= -2.0032e-08;
-    L[9][11]= -2.0032e-08;
+    L[9][10]= 2.0032e-08;
+    L[9][11]= 2.0032e-08;
     L[10][9]=0.1418;
     L[10][11]=0.1418;
-    L[11][9]=0;
-    L[11][10]=0;
 
-    yy[0] = y[8]*(std::sin(y[5])*std::sin(y[3])+std::cos(y[5])*std::cos(y[3])*std::sin(y[4])) - y[7]*(std::cos(y[5])*std::sin(y[3])-std::cos(y[3])*std::sin(y[5])*std::sin(y[4])) +y[6]*std::cos(y[3])*std::cos(y[4]);
-    yy[1] =-y[8]*(std::cos(y[3])*std::sin(y[5])-std::cos(y[5])*std::sin(y[3])*std::sin(y[4])) + y[7]*(std::cos(y[5])*std::cos(y[3])+std::sin(y[5])*std::sin(y[3])*std::sin(y[4])) +y[6]*std::cos(y[4])*std::sin(y[3]);
-    yy[2] =y[8]*std::cos(y[5])*std::cos(y[4])-y[6]*std::sin(y[4])+y[7]*std::cos(y[4])*std::sin(y[5]);
-    yy[3] =y[10]*(std::sin(y[5])/std::cos(y[4]))+y[11]*(std::cos(y[5])/std::cos(y[4]));
-    yy[4] =y[10]*std::cos(y[5])-y[11]*std::sin(y[5]);
-    yy[5] =y[9]+y[10]*std::sin(y[5])*std::tan(y[4])+y[11]*std::cos(y[5])*std::tan(y[4]);
+    yy[0] = y[6] ;
+    yy[1] = y[7];
+    yy[2] = y[8];
+    yy[3] =y[9]*180/M_PI;
+    yy[4] =y[10]*180/M_PI;
+    yy[5] =y[11]*180/M_PI;
     yy[6] =1/m *(std::sin(y[5])*std::sin(y[3])+std::cos(y[5])*std::cos(y[3])*std::sin(y[4])) * f_t;
     yy[7] =1/m *(std::cos(y[3])*std::sin(y[5])-std::cos(y[5])*std::sin(y[3])*std::sin(y[4])) *f_t;
-    yy[8] =1/m *std::cos(y[5])*std::cos(y[4])*f_t+g;
-    yy[9] =(I_y-I_z)/I_x*y[10]*y[11] + 1/I_x*tau_x;
-    yy[10]=(I_z-I_x)/I_y*y[9]*y[11] + 1/I_y*tau_y;
-    yy[11]=(I_x-I_y)/I_z*y[9]*y[10] +1/I_z *tau_z;
+    yy[8] =1/m *std::cos(y[5])*std::cos(y[4])*f_t-g;
+    yy[9] =((I_y-I_z)/I_x)*y[10]*y[11] + 1/I_x*tau_x;
+    yy[10]=((I_z-I_x)/I_y)*y[9]*y[11] + 1/I_y*tau_y;
+    yy[11]=((I_x-I_y)/I_z)*y[9]*y[10] +1/I_z *tau_z;
 
         /* to account for input disturbances */
-    yy[12] = L[0][3]*y[15]+L[0][4]*y[16]+L[0][5]*y[17]+L[0][6]*y[18]+L[0][7]*y[19]+L[0][8]*y[20]+w[0];
-    yy[13] = L[1][3]*y[15]+L[1][4]*y[16]+L[1][5]*y[17]+L[1][6]*y[18]+L[1][7]*y[19]+L[1][8]*y[20]+w[1];
-    yy[14] = L[2][4]*y[16]+L[2][5]*y[17]+L[2][6]*y[18]+L[2][7]*y[19]+L[2][8]*y[20]+w[2];
-    yy[15] = L[3][4]*y[16]+L[3][5]*y[17]+L[3][10]*y[22]+L[3][11]*y[23]+w[3];
-    yy[16] = L[4][5]*y[17]+L[4][10]*y[22]+L[4][11]*y[23]+w[4];
-    yy[17] = L[5][4]*y[16]+L[5][5]*y[17]+L[5][9]*y[21]+L[5][10]*y[22]+L[5][11]*y[23]+w[5];
+    yy[12] = L[0][6]*y[18]+w[0];
+    yy[13] = L[1][7]*y[19]+w[1];
+    yy[14] = L[2][8]*y[20]+w[2];
+    yy[15] = L[3][9]*y[21]+w[3];
+    yy[16] = L[4][10]*y[22]+w[4];
+    yy[17] = L[5][11]*y[23]+w[5];
     yy[18] = L[6][3]*y[15]+L[6][4]*y[16]+L[6][5]*y[17]+w[6];
     yy[19] = L[7][3]*y[15]+L[7][4]*y[16]+L[7][5]*y[17]+w[7];
     yy[20] = L[8][4]*y[16]+L[8][5]*y[17]+w[8];
     yy[21] = L[9][10]*y[22]+L[9][11]*y[23]+w[9];
     yy[22] = L[10][9]*y[21]+L[9][11]*y[23]+w[10];
-    yy[23] = L[11][9]*y[21]+L[11][10]*y[22]+w[11];
+    yy[23] = w[11];
   };
   scots::runge_kutta_fixed4(rhs_1,y,u,dis, w2_lb,w2_ub,2*state_dim,tau,10);
 };

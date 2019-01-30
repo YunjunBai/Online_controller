@@ -115,6 +115,7 @@ namespace scots {
                             transition_function.m_pre_ptr[i*M+j]=sum;
                         }
                     }
+                    std::cout<<"sum:"<<sum<<std::endl;
                     /* allocate memory for pre list */
                     transition_function.init_transitions(sum);
 #pragma omp parallel
@@ -183,10 +184,11 @@ namespace scots {
                     const abs_type i,
                     const abs_type j,
                     const abs_type npost,
-                    std::vector<abs_type> & lb,
-                    std::vector<abs_type> & no,
+                    const std::vector<abs_type> lb,
+                    const std::vector<abs_type> no,
                     std::vector<abs_type> & cc)
                 {
+                    std::cout<<"excuse this function"<<std::endl;
                     /* compute indices of post */
                     for(abs_type k=0; k<npost; k++) {
                         abs_type q=0;
@@ -202,6 +204,7 @@ namespace scots {
                         /* (i,j,q) is a transition */    
                         /* increment number of pres for (q,j) */ 
                         transition_function.m_no_pre[q*M+j]++;
+                        std::cout<<npost<<"hhh"<<transition_function.m_no_pre[q*M+j]<<std::endl;
                         /* store id's of lower-left and upper-right cell */
                         if(k==0)
                             transition_function.corner_IDs[i*(2*M)+2*j]=q;
@@ -249,6 +252,7 @@ namespace scots {
                         no[k]=(ub[k]-lb[k]+1);
                         /* total number of post */
                         npost*=no[k];
+                       
                         cc[k]=0;
                     }
                 }
@@ -386,7 +390,7 @@ namespace scots {
                                     rs_post(y,u);
                                     abs_type npost=1;
                                     process_post(transition_function, i, j, x, y, r, npost, lb, ub, no, cc);
-
+                                    //std::cout<<"nuem"<<npost<<std::endl;
                                     if(transition_function.out_of_domain[i*M+j]) 
                                         continue;
 
