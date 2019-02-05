@@ -54,11 +54,11 @@ int main() {
   /* construct grid for the state space */
   /* setup the workspace of the synthesis problem and the uniform grid */
   /* grid node distance diameter */
-  state_type s_eta={{1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180,0.2,0.2,0.2,0.02,0.02,0.02}}; 
+  state_type s_eta={{1.5,1.5,1.5,20*M_PI/180,20*M_PI/180,20*M_PI/180,0.3,0.3,0.3,0.05,0.05,0.05}}; 
   /* lower bounds of the hyper rectangle */
   state_type s_lb={{-2.5,-2.5,-2.5,-30*M_PI/180,-30*M_PI/180,-30*M_PI/180,0,0,0,-0.05,-0.05,-0.05}};
   /* upper bounds of the hyper rectangle */
-  state_type s_ub={{2,2,2,30*M_PI/180,30*M_PI/180,30*M_PI/180,1,1,1,0.05,0.05,0.05}}; 
+  state_type s_ub={{2,2,2,30*M_PI/180,30*M_PI/180,30*M_PI/180,0.9,0.9,0.9,0.05,0.05,0.05}}; 
   scots::UniformGrid ss(state_dim,s_lb,s_ub,s_eta);
   std::cout << "Uniform grid details:" << std::endl;
   ss.print_info();
@@ -69,17 +69,18 @@ int main() {
   /* upper bounds of the hyper rectangle */
   input_type i_ub={{2500,2500,2500,2500}};
   /* grid node distance diameter */
-  input_type i_eta={{300,300,300,300}};
+  input_type i_eta={{400,400,400,400}};
   scots::UniformGrid is(input_dim,i_lb,i_ub,i_eta);
   is.print_info();
 
   /* setup object to compute the transition function */
   scots::Abstraction<state_dim,input_dim> abs(ss,is);
   
-  disturbance_type w_1={.108,0.2,0,0,0,0,0.1,0,0,0,0,0};
+  //disturbance_type w_1={.108,0.2,0,0,0,0,0.1,0,0,0,0,0};
+  disturbance_type w_1={.203,0.2,0.1,0,0,0,0.1,0,0,0,0,0};
   disturbance_type w_2={0.203, 0.1, 0.1,0,0,0,0,0,0,0,0,0};
-  disturbance_type w2_lb={0,0,0,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0};
-  disturbance_type w2_ub={1,1,1,0,0,0,1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180};
+  disturbance_type w2_lb={1,1,1,-10*M_PI/180,-10*M_PI/180,-10*M_PI/180,0,0,0,0,0,0};
+  disturbance_type w2_ub={1.5,1.5,1.5,0,0,0,1,1,1,10*M_PI/180,10*M_PI/180,10*M_PI/180};
 
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
   
@@ -127,11 +128,11 @@ int main() {
       r[i] = y[i+state_dim];
     }
     
-    if(test_counter){
-      --test_counter;
-      std::cout<<" test x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<" "<<x[4]<<" "<<x[5]<<" "<<x[6]<<" "<<x[7]<<" "<<x[8]<<" "<<x[9]<<" "<<x[10]<<" "<<x[11]<<std::endl;
-    //std::cout<<" test r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" "<<r[3]<<" "<<r[4]<<" "<<r[5]<<" "<<r[6]<<" "<<r[7]<<" "<<r[8]<<" "<<r[9]<<" "<<r[10]<<" "<<r[11]<<std::endl;
-    }
+    // if(test_counter){
+    //   --test_counter;
+    //   std::cout<<" test x:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<" "<<x[4]<<" "<<x[5]<<" "<<x[6]<<" "<<x[7]<<" "<<x[8]<<" "<<x[9]<<" "<<x[10]<<" "<<x[11]<<std::endl;
+    // //std::cout<<" test r:"<<r[0]<<" "<<r[1]<<" "<<r[2]<<" "<<r[3]<<" "<<r[4]<<" "<<r[5]<<" "<<r[6]<<" "<<r[7]<<" "<<r[8]<<" "<<r[9]<<" "<<r[10]<<" "<<r[11]<<std::endl;
+    // }
     
       r_es=ge.gb_estimate(r,u);
     disturbance_type w = dis.get_disturbance(x,r_es); 
@@ -327,7 +328,8 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
   /* define target set */
   auto target = [&s_eta, &ss](const scots::abs_type& abs_state) {
     state_type t_lb = {{0.6,0.6,0.6,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
-    state_type t_ub = {{1,1,1,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
+    state_type t_ub = {{2,2,2,20*M_PI/180,20*M_PI/180,20*M_PI/180,0.9,0.9,0.9,0.05,0.05,0.05}};
+   
     state_type c_lb;
     state_type c_ub;
     /* center of cell associated with abs_state is stored in x */
@@ -355,7 +357,7 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::solve_reachability_game(tf_new,target);
+  scots::WinningDomain win=scots::solve_reachability_game(tf_old,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
@@ -363,5 +365,13 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
   if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller"))
     std::cout << "Done. \n";
 
+std::cout << "\nOnline Synthesis: " << std::endl;
+  tt.tic();
+  scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue, win);
+  tt.toc();
+  std::cout << "Winning domain size: " << win_online.get_size() << std::endl;
+  std::cout << "\nWrite controller to online_controller.scs \n";
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_online)),"online_controller"))
+    std::cout << "Done. \n";
   return 1;
 }

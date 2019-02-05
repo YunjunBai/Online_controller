@@ -194,12 +194,12 @@ namespace scots {
                     const abs_type j,
                     const abs_type npost,
 
-                    std::array<abs_type,state_dim> & lb,
-                    std::array<abs_type,state_dim> & no,
+                    std::array<abs_type,state_dim>  lb,
+                    std::array<abs_type,state_dim> no,
                     std::array<abs_type,state_dim> & cc)
 
                 {
-                    std::cout<<"excuse this function"<<std::endl;
+                   // std::cout<<"excuse this function"<<std::endl;
                     /* compute indices of post */
                     for(abs_type k=0; k<npost; k++) {
                         abs_type q=0;

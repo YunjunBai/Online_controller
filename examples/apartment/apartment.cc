@@ -218,11 +218,11 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
   //abs.compute_gb(tf,vehicle_post, radius_post);
   tt.toc();
   std::cout << "Number of new transitions: " << tf_o1d.get_no_transitions() << std::endl;
-  dis.update_disturbance(w_3, w3_lb, w3_ub,avoid);
+  dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
   
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
-  abs.recompute_gb(tf_new,online_queue, tf_o1d, w3_lb, w3_ub, rs_repost, avoid);
+  abs.recompute_gb(tf_new,online_queue, tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
   if(!getrusage(RUSAGE_SELF, &usage))
     std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_new.get_no_transitions() << std::endl;
   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
@@ -292,7 +292,7 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &n
 
   std::cout << "\nOnline Synthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue,avoid, win);
+  scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue,win,avoid);
   tt.toc();
   std::cout << "Winning domain size: " << win_online.get_size() << std::endl;
   std::cout << "\nWrite controller to online_controller.scs \n";

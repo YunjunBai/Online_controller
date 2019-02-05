@@ -115,7 +115,13 @@ int main(){
     //std::cout<<"x"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<x[3]<<std::endl;
     r_es=ge.gb_estimate(r,u);
     disturbance_type w = dis.get_disturbance(x,r_es);
-   
+   double L[3][3];
+   L[0][0]=5.7412/50;
+    L[0][2]=10.7989/50;
+    L[1][0]=0.0025/50;
+    L[1][1]=0.3700/50;
+    L[1][2]=1.2125;
+    L[2][2]=-4*u[0]/50;
     double Gx =((alphax * (k1 + ((1 - k1) * (y[2] / (y[2] + k2))))) - (betax * (k3 + (1 - k3) * (y[2] / (y[2] + k4)))));
     double Gy  =((alphay * (1 - (d0 * (y[2] / z0)))) - betay);
     double Mxy =(m1 * (1 - (y[2] / z0)));
@@ -155,7 +161,13 @@ auto rs_repost = [&dis,&ge,w3_lb,w3_ub](ds_type &y, input_type &u, bool &neigbou
     double Gx =((alphax * (k1 + ((1 - k1) * (y[2] / (y[2] + k2))))) - (betax * (k3 + (1 - k3) * (y[2] / (y[2] + k4)))));
     double Gy  =((alphay * (1 - (d0 * (y[2] / z0)))) - betay);
     double Mxy =(m1 * (1 - (y[2] / z0)));
-
+     double L[3][3];
+   L[0][0]=5.7412/50;
+    L[0][2]=10.7989/50;
+    L[1][0]=0.0025/50;
+    L[1][1]=0.3700/50;
+    L[1][2]=1.2125;
+    L[2][2]=-4*u[0]/50;
     yy[0] = (Gx - Mxy) * y[0];
     yy[1] = Mxy * y[0] + Gy * y[1];
     if(u[0]==0)

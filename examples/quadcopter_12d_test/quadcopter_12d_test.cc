@@ -350,8 +350,8 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
   // tt.toc();
   /* define target set */
   auto target = [&s_eta, &ss](const scots::abs_type& abs_state) {
-    state_type t_lb = {{0.6,0.6,0.6,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
-    state_type t_ub = {{1,1,1,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
+     state_type t_lb = {{0.6,0.6,0.6,-20*M_PI/180,-20*M_PI/180,-20*M_PI/180,0,0,0,0,0,0}};
+    state_type t_ub = {{2,2,2,20*M_PI/180,20*M_PI/180,20*M_PI/180,0.9,0.9,0.9,0.05,0.05,0.05}};
     state_type c_lb;
     state_type c_ub;
     /* center of cell associated with abs_state is stored in x */
@@ -379,13 +379,20 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
  
   std::cout << "\nSynthesis: " << std::endl;
   tt.tic();
-  scots::WinningDomain win=scots::solve_reachability_game(tf_new,target);
+  scots::WinningDomain win=scots::solve_reachability_game(tf_old,target);
   tt.toc();
   std::cout << "Winning domain size: " << win.get_size() << std::endl;
 
   std::cout << "\nWrite controller to controller.scs \n";
   if(write_to_file(scots::StaticController(ss,is,std::move(win)),"controller"))
     std::cout << "Done. \n";
-
+std::cout << "\nOnline Synthesis: " << std::endl;
+  tt.tic();
+  scots::WinningDomain win_online=scots::online_reachability_game(tf_new, online_queue, win);
+  tt.toc();
+  std::cout << "Winning domain size: " << win_online.get_size() << std::endl;
+  std::cout << "\nWrite controller to online_controller.scs \n";
+  if(write_to_file(scots::StaticController(ss,is,std::move(win_online)),"online_controller"))
+    std::cout << "Done. \n";
   return 1;
 }

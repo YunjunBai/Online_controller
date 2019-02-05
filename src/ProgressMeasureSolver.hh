@@ -155,7 +155,7 @@ WinningDomain online_safety_game(const TransitionFunction& trans_function,
 
 
 /********************solver for reachability game*********************/
-template<class F1, class F2=decltype(params::avoid)>
+template<class F1, class F2=decltype(params::avoid_abs)>
 WinningDomain static_reachability_game(const TransitionFunction& trans_function,
                                       F1& target, 
                                       F2& avoid = params::avoid) {
@@ -239,8 +239,9 @@ WinningDomain static_reachability_game(const TransitionFunction& trans_function,
 template<class F1=decltype(params::avoid)>
 WinningDomain online_reachability_game(const TransitionFunction& trans_function,
                                       std::queue<abs_type> online_queue, 
-                                      F1& avoid,
-                                      WinningDomain wd
+                                      WinningDomain wd,
+                                      F1& avoid=params::avoid
+                                      
                                       ) {
   /* size of state alphabet */
   abs_type N=trans_function.m_no_states;
@@ -296,7 +297,6 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
         edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]);
         /* check if for node i and input j all posts are processed */
         if(!K[i*M+j] && value[i]>edge_val[i*M+j]) {
-
           fifo.push(i);
           value[i]=edge_val[i*M+j]; 
           win_domain[i]=j;
