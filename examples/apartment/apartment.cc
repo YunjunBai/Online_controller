@@ -35,7 +35,7 @@ const int state_dim=3;
 const int input_dim=2;
 
 /* sampling time */
-const double tau = 0.3;
+const double tau = 0.15;
 
 /*
  * data types for the state space elements and input space
@@ -129,21 +129,26 @@ void main_parameters(const int p1){
 
   scots::GbEstimation<disturbance_type,matrix_type> ge(is, ss,w_1,w_2);
   ge.exp_interals(l_matrix,tau/10);
-
+  
   auto rs_post = [&dis,&ge,avoid,w3_ub,w3_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  int num=0;
+  auto rhs =[&dis,&ge,avoid,&num](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
     state_type r_es;
+    disturbance_type w;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
+    if(num==0 || num==20){
+      num++;
     r_es=ge.gb_estimate(r,u);
-    disturbance_type w = dis.get_disturbance(x,r_es,avoid);
-   
+    w = dis.get_disturbance(x,r_es,avoid);
+  }
+
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);
@@ -161,18 +166,25 @@ void main_parameters(const int p1){
 
 auto rs_repost = [&dis,&ge,w3_lb,w3_ub,avoid](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
+  int num=0;
   //dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,w3_lb,w3_ub,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w3_lb,w3_ub,avoid,&num](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
     state_type r_es;
+    disturbance_type w;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    r_es=ge.gb_estimate(r,u);
-    disturbance_type w = dis.get_disturbance(x,r_es,avoid); 
+    if (num==0 || num==20)
+    {
+      r_es=ge.gb_estimate(r,u);
+    w = dis.get_disturbance(x,r_es,avoid); 
+    num++;
+    }
+    
     //disturbance_type w = {0.05, 0.05, 0.05};
     double alpha=std::atan(std::tan(u[1])/2.0);
     double c = std::abs(u[0])*std::sqrt(std::tan(u[1])*std::tan(u[1])/4.0+1);

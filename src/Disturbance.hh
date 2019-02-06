@@ -188,6 +188,9 @@ public:
     // }
     
   }
+  disturbance_type get_initDisturbance(){
+    return init_disturbance;
+  }
 
   /*given a x, return the related w*/
   template<class F1, class F2, class F4=decltype(params::avoid_dis)>
@@ -325,6 +328,8 @@ bool get_intersection_check(){
 bool get_out_of_domain(){
   return out_of_domain;
 }
+
+
 void set_out_of_domain(){
   out_of_domain=false;
 }

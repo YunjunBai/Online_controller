@@ -35,7 +35,7 @@ const int state_dim=5;
 const int input_dim=2;
 
 /* sampling time */
-const double tau = 0.3;
+const double tau = 0.15;
 const double ra=0.2;
 const double a=1;
 const double d_1=1;
@@ -109,8 +109,8 @@ void main_parameters(const int p1){
 
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
-  //disturbance_type w_1={{0.1, 0.1, 0.1, 0.1, 0.1}};
-  disturbance_type w_1={{0.05, 0.05, 0.05,0.05,0.05}};
+  disturbance_type w_1={{0.1, 0.1, 0.1, 0.1, 0.1}};
+  //disturbance_type w_1={{0.05, 0.05, 0.05,0.05,0.05}};
   disturbance_type w_2={{0.1, 0.1, 0.1,0.1,0.1}};
   disturbance_type w2_lb={{0.5,2,-3.5,0,0}};
   disturbance_type w2_ub={{2.5,4,3.5,2,2}};
@@ -140,18 +140,22 @@ void main_parameters(const int p1){
 
   auto rs_post = [&dis,&ge,avoid,w2_ub,w2_lb](ds_type &y, input_type &u) -> void {
    // dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+    int num=0;
+  auto rhs =[&dis,&ge,avoid,&num](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
     state_type r_es;
+    disturbance_type w;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
+    if(num==0 || num==20){
     r_es=ge.gb_estimate(r,u);
-    disturbance_type w = dis.get_disturbance(x,r_es,avoid);
-   
+     w = dis.get_disturbance(x,r_es,avoid);
+    num++;
+   }
     //disturbance_type w = {0.05, 0.05, 0.05};
     double l[5][5];
    l[0][2]=20;
@@ -188,18 +192,23 @@ void main_parameters(const int p1){
 
 auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &neigbour) -> void {
   dis.set_intersection_check();
+  int num=0;
   //dis.set_out_of_domain();
-  auto rhs =[&dis,&ge,w2_lb,w2_ub,avoid](ds_type &yy, const ds_type &y, input_type &u) -> void {
+  auto rhs =[&dis,&ge,w2_lb,w2_ub,avoid,&num](ds_type &yy, const ds_type &y, input_type &u) -> void {
     /* find the distrubance for the given state */
     state_type x;
     state_type r;
     state_type r_es;
+    disturbance_type w;
     for (int i=0; i<state_dim; i++){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
+    if(num==0 || num==20){
     r_es=ge.gb_estimate(r,u);
-    disturbance_type w = dis.get_disturbance(x,r_es,avoid); 
+    w = dis.get_disturbance(x,r_es,avoid); 
+    num++;
+  }
     //disturbance_type w = {0.05, 0.05, 0.05};
       double l[5][5];
     l[0][2]=20;
