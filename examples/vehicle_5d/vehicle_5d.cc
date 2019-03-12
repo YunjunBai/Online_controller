@@ -1,9 +1,3 @@
-/*
- * vehicle.cc
- *
- *  created: Oct 2016
- *   author: Matthias Rungger
- */
 
 /*
  * information about this example is given in
@@ -13,6 +7,7 @@
 
 #include <iostream>
 #include <array>
+
 
 /* SCOTS header */
 #include "scots.hh"
@@ -35,7 +30,7 @@ const int state_dim=5;
 const int input_dim=2;
 
 /* sampling time */
-const double tau = 0.15;
+const double tau = 0.3;
 const double ra=0.2;
 const double a=1;
 const double d_1=1;
@@ -109,15 +104,15 @@ void main_parameters(const int p1){
 
  /* write obstacles to file */
   write_to_file(ss,avoid,"obstacles");
-  disturbance_type w_1={{0.1, 0.1, 0.1, 0.1, 0.1}};
-  //disturbance_type w_1={{0.05, 0.05, 0.05,0.05,0.05}};
+  //disturbance_type w_1={{0.1, 0.1, 0.1, 0.1, 0.1}};
+  disturbance_type w_1={{0.01, 0.01, 0.01,0.01,0.01}};
   disturbance_type w_2={{0.1, 0.1, 0.1,0.1,0.1}};
-  disturbance_type w2_lb={{0.5,2,-3.5,0,0}};
-  disturbance_type w2_ub={{2.5,4,3.5,2,2}};
-  // disturbance_type w_3={{0.1, 0.1, 0.1}};
-  // disturbance_type w3_lb={{7.6-i_eta[0]*p1,0,-3.5}};
-  // disturbance_type w3_ub={{10,1.8+i_eta[1]*p1*21/38,3.5}};
-  //double persent=(w3_ub[0]-w3_lb[0])*(w3_ub[1]-w3_lb[1])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1]));
+   disturbance_type w2_lb={{0.5,2,-3.5,0,0}};
+   disturbance_type w2_ub={{5.5,3,3.5,1,1}};
+   disturbance_type w_3={{0.1, 0.1, 0.1,0.1,0.1}};
+   disturbance_type w3_lb={{4,2,-3.5,0,0}};
+   disturbance_type w3_ub={{7,4,3.5,10,10}};
+  // double percent=(w2_ub[0]-w2_lb[0])*(w2_ub[1]-w2_lb[1])/((s_ub[0]-s_lb[0])*(s_ub[1]-s_lb[1]));
   scots::Disturbance<disturbance_type, state_type> dis(w_1, ss);
 
    auto l_matrix=[&is](const abs_type& input_id){
@@ -130,8 +125,8 @@ void main_parameters(const int p1){
     l[1][4]=1.4142;
     l[2][3]=1/10;
     l[2][4]=1/10;
-    l[3][3]=-1;
-    l[4][4]=-1;
+    l[3][3]=1;
+    l[4][4]=1;
     return l;
   };
 
@@ -151,11 +146,12 @@ void main_parameters(const int p1){
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    if(num==0 || num==20){
+   // if(num==0 || num==10 || num==15){
     r_es=ge.gb_estimate(r,u);
      w = dis.get_disturbance(x,r_es,avoid);
-    num++;
-   }
+   // }
+   
+   num++;
     //disturbance_type w = {0.05, 0.05, 0.05};
     double l[5][5];
    l[0][2]=20;
@@ -166,8 +162,8 @@ void main_parameters(const int p1){
     l[1][4]=1.4142;
     l[2][3]=1/10;
     l[2][4]=1/10;
-    l[3][3]=-1;
-    l[4][4]=-1;
+    l[3][3]=1;
+    l[4][4]=1;
 
     double alpha_11=0.5*ra*y[3]*(std::cos(y[2])+a*std::sin(y[2]));
     double alpha_12=0.5*ra*y[3]*(std::cos(y[2])-a*std::sin(y[2]));
@@ -204,11 +200,11 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
       x[i] = y[i];
       r[i] = y[i+state_dim];
     }
-    if(num==0 || num==20){
+    //if(num==0 || num==20){
     r_es=ge.gb_estimate(r,u);
     w = dis.get_disturbance(x,r_es,avoid); 
-    num++;
-  }
+  //}
+  num++;
     //disturbance_type w = {0.05, 0.05, 0.05};
       double l[5][5];
     l[0][2]=20;
@@ -219,8 +215,8 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
     l[1][4]=1.4142;
     l[2][3]=1/10;
     l[2][4]=1/10;
-    l[3][3]=-1;
-    l[4][4]=-1;
+    l[3][3]=1;
+    l[4][4]=1;
 
     double alpha_11=0.5*ra*y[3]*(std::cos(y[2])+a*std::sin(y[2]));
     double alpha_12=0.5*ra*y[3]*(std::cos(y[2])-a*std::sin(y[2]));
@@ -257,23 +253,20 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
   scots::Abstraction<state_dim,input_dim> abs(ss,is);
   std::queue<abs_type> online_queue; 
 
-  
- //  tt.tic();
- //  abs.compute_gb(tf_o,rs_post, avoid);
- //  //abs.compute_gb(tf,vehicle_post, radius_post);
- //  tt.toc();
- // std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
- //  if(!getrusage(RUSAGE_SELF, &usage))
- //   std::cout << "Memory per transition: " << usage.ru_maxrss/(double)tf_o1d.get_no_transitions() << std::endl;
-  
-  //dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
+
+  tt.tic();
+  abs.compute_gb(tf_o,rs_post, avoid);
+  tt.toc();
+  std::cout << "Number of new transitions: " << tf_o.get_no_transitions() << std::endl;
+ 
+  dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
+
   tt.tic();
   abs.compute_gb(tf_o1d,rs_post, avoid);
-  //abs.compute_gb(tf,vehicle_post, radius_post);
   tt.toc();
   std::cout << "Number of new transitions: " << tf_o1d.get_no_transitions() << std::endl;
+ 
   dis.update_disturbance(w_2, w2_lb, w2_ub,avoid);
-  
   std::cout << "\nComputing the new transition function locally (after distrubance changes): " << std::endl;
   tt.tic();
   abs.recompute_gb(tf_new,online_queue, tf_o1d, w2_lb, w2_ub, rs_repost, avoid);
@@ -340,7 +333,7 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
     // std::ofstream write;
     // std::ifstream read;
     // write.open("result.txt", std::ios::app);          
-    // write << "p:"<<persent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
+    // write << "p:"<<percent<<" t1:"<<t1<<" t2:"<<t2<<std::endl;
     // write.close();
     // read.close();
 
@@ -364,12 +357,12 @@ auto rs_repost = [&dis,&ge,w2_lb,w2_ub,avoid](ds_type &y, input_type &u, bool &n
 }
 int  main()
 {
-  /*
-  for (int k = 0; k < 39; ++k)
+ 
+  for (int k = 0; k <9; ++k)
   {
       main_parameters(k);
   }
-  */
-  main_parameters(20);
+
+  //main_parameters(20);
   return 0;
 }

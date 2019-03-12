@@ -362,6 +362,7 @@ namespace scots {
                         /* loop over all cells */
 #pragma omp parallel shared(counter)
                         {
+                            //std::cout<<"the number of threads:"<<omp_get_num_threads()<<std::endl;
                             state_type x;
                             input_type u;
                             ds_type y;
@@ -691,6 +692,7 @@ namespace scots {
 
 #pragma omp parallel
                         {
+                            //std::cout<<"the number of threads:"<<omp_get_num_threads()<<std::endl;
                             state_type x;
                             input_type u;
                             ds_type y;
@@ -763,7 +765,7 @@ namespace scots {
                                         /* integrate system and radius growth bound */
                                         /* the result is stored in x and r */
                                         bool intersection_with_region = false;
-                                        rs_repost(y,u,intersection_with_region); //todo
+                                        rs_repost(y,u,intersection_with_region); 
                                         abs_type npost=1;
                                         process_post(new_transition, q, j, x, y, r, npost, lb, ub, no, cc);
 
@@ -805,7 +807,7 @@ namespace scots {
                                         }  
                                     }
                                     chunk = 0;
-                                    //put new stuff in the work queue
+                                  // put new stuff in the work queue
                                     #pragma omp critical
                                     for (int i = 0; i < new_chunk; i++) {
                                         recompute_queue.emplace(new_work_list_states[i],new_work_list_inputs[i]);
@@ -1042,7 +1044,7 @@ namespace scots {
                                 /* integrate system and radius growth bound */
                                 /* the result is stored in x and r */
 
-                                rs_post(y,u); //todo
+                                rs_repost(y,u); //todo
 
                                 /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
                                 for (std::size_t k = 0; k<state_dim; ++k)
@@ -1249,6 +1251,289 @@ namespace scots {
                         write_to_fileb(m_state_alphabet,recomputed_mark,"recomputation_max");
 
                     } 
+
+
+
+                     template<class F2, class F3, class F4=decltype(params::avoid_abs)>
+                    void recompute_gb_copy(TransitionFunction& new_transition,
+                            std::queue<abs_type>& diff,
+                            const TransitionFunction& old_transition, 
+                            F2& d_lb,
+                            F2& d_ub,
+                            F3& rs_post,
+                            F4& avoid=params::avoid_abs){
+
+                        
+                        /* variables for managing the region */
+                        std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                        std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                        std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                        std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
+
+                        /* init in transition_function the members no_pre, no_post, pre_ptr */ 
+                        new_transition.init_infrastructure(N,M);
+                        /* lower-left & upper-right corners of hyper rectangle of cells that cover attainable set */
+                        /* make if a states recompute or not.*/
+                        std::unique_ptr<std::atomic_flag[]> recomputed_mark(new std::atomic_flag[N*M]());
+                        for (abs_type i = 0; i < N*M; i++) {
+                            recomputed_mark[i].clear(); //ATOMIC_FLAG_INIT;
+                        }
+                        /*contain the states which need to recompute*/
+                        std::vector<bool> recompute_queue(N,false); 
+                        std::vector<bool> out_of_region(N, true); 
+                        std::vector<bool> diff_done(N,false);
+
+                        /*some variables for computing neighbours*/
+                        std::vector<int> tmp;
+                        std::vector<std::vector<int>>  cc_neighbours;
+
+                        int num[]={-1,0,1};
+                        /*init a queue which contains the states around (d_lb, d_ub), recompute transtions for queue, 
+                         * if in ODE, x gets into the region(lb,ub), then enqueue the  neighbours. repeat this process untill 
+                         * queue become empty. make all states in queue recomputed.
+                         */
+                        /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
+                        abs_type nNRegion=1;
+
+                        for (std::size_t i = 0; i < state_dim; ++i)
+                        {
+                            tmp.push_back(num[0]);
+                        }
+                        cc_neighbours.push_back(tmp);
+
+                        for (int i = state_dim-1; i>=0; i--)
+                        {
+                            int ncc=cc_neighbours.size();
+                            for (int k = 1; k < 3; ++k)
+                            {
+                                for (int j = 0; j < ncc; ++j)
+                                {
+                                    tmp=cc_neighbours[j];
+                                    tmp[i]=num[k];
+                                    cc_neighbours.push_back(tmp);
+                                }
+                            }
+                        }
+                        int ncc = cc_neighbours.size();
+                        abs_type queuesize=0;
+                        for(std::size_t k=0; k<state_dim; k++) {
+                            /* check for out of bounds */
+                            double left = d_lb[k]-eta[k]-m_z[k];
+                            double right = d_ub[k]+eta[k]+m_z[k];
+                            if(left <= lower_left[k]-eta[k]/2.0)
+                                left=lower_left[k];
+                            if(right >= upper_right[k]+eta[k]/2.0)
+                                right=upper_right[k];
+
+                            /* integer coordinate of lower left corner of region */
+                            lb[k] = static_cast<abs_type>((left-lower_left[k]+eta[k]/2.0)/eta[k]);
+                            /* integer coordinate of upper right corner of region */
+                            ub[k] = static_cast<abs_type>((right-lower_left[k]+eta[k]/2.0)/eta[k]);
+                            /* number of grid points in the region in each dimension */
+                            no[k]=(ub[k]-lb[k]+1);
+                            /* total number of region */
+                            nNRegion*=no[k];
+                            cc[k]=0;
+                        }
+
+                        /* compute indices of Region */
+                        for(abs_type k=0; k<nNRegion; k++) {
+                            abs_type q=0;
+                            for(std::size_t l=0; l<state_dim; l++)  {
+                                q+=(lb[l]+cc[l])*m_state_alphabet.get_nn()[l];
+                            }
+                            cc[0]++;
+                            for(std::size_t l=0; l<state_dim-1; l++) {
+                                if(cc[l]==no[l]) {
+                                    cc[l]=0;
+                                    cc[l+1]++;
+                                }
+                            }
+                            for(abs_type j = 0; j < M; j++)
+                            {
+                                bool already_done = recomputed_mark[q*M+j].test_and_set();
+                                if (!already_done){
+                                    recompute_queue[q]=true;
+                                    
+                                }
+                            }
+                            if(region(q,d_lb,d_ub,eta))
+                                out_of_region[q]=false;  
+                               
+                            }     
+                            
+                        
+                       // std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
+
+
+                        abs_type conn=0;
+                        abs_type coun=0;
+                        /*start big loop untill the recompute_queue become empty*/
+
+                        /* for display purpose */
+                        abs_type counter=0;
+
+#pragma omp parallel shared(counter)
+                        {
+                            //std::cout<<"the number of threads:"<<omp_get_num_threads()<<std::endl;
+                            state_type x;
+                            input_type u;
+                            ds_type y;
+                            state_type r; 
+                            /* variables for managing the region */
+                            std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                            std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                            std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                            std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
+
+#pragma omp for schedule(dynamic, CHUNK_SIZE)
+                            for(abs_type i=0; i<N; i++) {
+                                if (!recompute_queue[i]) {
+                                    continue;
+                                }
+                                
+                               abs_type q=i;
+                                if(avoid(q)) {
+                                    for(abs_type j=0; j<M; j++) {
+                                        new_transition.out_of_domain[q*M+j]=true;
+                                    }
+                                    continue;
+                                }
+                                /* loop over all inputs */
+                                for(abs_type j=0; j<M; j++) {
+                                    /* is i an element of the avoid symbols ? */
+
+                                    new_transition.out_of_domain[q*M+j]=false;
+                                    /* get center x of cell */
+                                    m_state_alphabet.itox(q,x);
+                                    /* cell radius (including measurement errors) */
+                                    for(std::size_t k=0; k<state_dim; k++){
+                                        r[k]=eta[k]/2.0+m_z[k];
+                                        y[k]=x[k];
+                                        y[k+state_dim]=r[k];
+                                    }
+
+                                    /* current input */
+                                    m_input_alphabet.itox(j,u);
+                                    /* integrate system and radius growth bound */
+                                    /* the result is stored in x and r */
+
+                        
+                                        rs_post(y,u); 
+                                        abs_type npost=1;
+                                        process_post(new_transition, q, j, x, y, r, npost, lb, ub, no, cc);
+
+                                        if(new_transition.out_of_domain[q*M+j]){
+                                            continue;
+                                        }
+
+                                        compute_post_indices(new_transition, q, j, npost, lb, no, cc);
+                                        /* increment number of transitions by number of post */
+                                        new_transition.m_no_post[q*M+j]=npost;
+                                        
+                                }
+                                
+                                /* print progress */
+                                if(m_verbose) {
+                                    if(counter==0)
+                                        std::cout << "1st loop: ";
+                                }
+                                // std::cout << "Computed transition for state " << i << "\n" << std::endl;
+                                progress(q,counter);
+                            } // end for
+                        } // end parallel
+                        
+                        std::unique_ptr<bool[]> recomputed(new bool[N*M]());
+                        for (abs_type i = 0; i < N*M; i++) {
+                            recomputed[i] = recomputed_mark[i].test_and_set();
+                        }
+                        std::cout<<"total " <<coun<<std::endl;
+                        /*copy from old transtions*/
+                        for(abs_type i = 0; i < N; ++i )
+                        { 
+                            for (abs_type j = 0; j < M; ++j)
+                            {
+                                if(recomputed[i*M+j] && !diff_done[i] && !avoid(i)){
+                                    diff.push(i);
+                                    diff_done[i]=true;
+                                }
+                                //new_transition.out_of_domain[i*M+j]=standard_transition.out_of_domain[i*M+j];
+                                else{
+                                    new_transition.out_of_domain[i*M+j]=old_transition.out_of_domain[i*M+j];
+                                    new_transition.m_no_post[i*M+j]=old_transition.m_no_post[i*M+j];
+                                    new_transition.corner_IDs[i*(2*M)+2*j]=old_transition.corner_IDs[i*(2*M)+2*j];
+                                    new_transition.corner_IDs[i*(2*M)+2*j+1]=old_transition.corner_IDs[i*(2*M)+2*j+1];
+                                }           
+                            }
+                        }
+
+                        counter=0;
+#pragma omp parallel
+                        {
+                            /* variables for managing the region */
+                            std::array<abs_type,state_dim> lb;  /* lower-left corner */
+                            std::array<abs_type,state_dim> ub;  /* upper-right corner */
+                            std::array<abs_type,state_dim> no;  /* number of cells per dim */
+                            std::array<abs_type,state_dim> cc;  /* coordinate of current cell in the region */
+                            /* second loop: fill pre array */
+#pragma omp for schedule(dynamic, CHUNK_SIZE)
+                            for(abs_type i=0; i<N; i++) {
+                                /* loop over all inputs */
+                                for(abs_type j=0; j<M; j++) {
+                                    /* is x an element of the overflow symbols ? */
+                                    if(new_transition.out_of_domain[i*M+j]) 
+                                        continue;
+                                    /* extract lower-left and upper-bound points */
+                                    abs_type k_lb=new_transition.corner_IDs[i*(2*M)+2*j];
+                                    abs_type k_ub=new_transition.corner_IDs[i*2*M+2*j+1];
+                                    abs_type npost=1;
+
+                                    /* cell idx to coordinates */
+                                    for(int k=state_dim-1; k>=0; k--) {
+                                        /* integer coordinate of lower left corner */
+                                        lb[k]=k_lb/NN[k];
+                                        k_lb=k_lb-lb[k]*NN[k];
+                                        /* integer coordinate of upper right corner */
+                                        ub[k]=k_ub/NN[k];
+                                        k_ub=k_ub-ub[k]*NN[k];
+                                        /* number of grid points in each dimension in the post */
+                                        no[k]=(ub[k]-lb[k]+1);
+                                        /* total no of post of (i,j) */
+                                        npost*=no[k];
+                                        cc[k]=0;
+                                    }
+
+                                    for(abs_type k=0; k<npost; k++) {
+                                        abs_type q=0;
+                                        for(std::size_t l=0; l<state_dim; l++) 
+                                            q+=(lb[l]+cc[l])*NN[l];
+                                        cc[0]++;
+                                        for(std::size_t l=0; l<state_dim-1; l++) {
+                                            if(cc[l]==no[l]) {
+                                                cc[l]=0;
+                                                cc[l+1]++;
+                                            }
+                                        }
+                                        /* (i,j,q) is a transition */
+                                        new_transition.m_no_pre[q*M+j]++;
+                                    }
+                                }
+                                /* print progress */
+                                if(m_verbose) {
+                                    if(counter==0)
+                                        std::cout << "2nd loop: ";
+                                }
+                                progress(i,counter);
+                            } // end for
+                        } // end parallel
+
+                        fill_pre(new_transition);
+
+                        write_to_filebb(m_state_alphabet, m_input_alphabet, recomputed,"recomputation_lazy");
+
+                    }//function closed
+
+
         };
 
 } /* close namespace */

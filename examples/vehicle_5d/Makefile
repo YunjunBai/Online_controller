@@ -12,7 +12,8 @@ SCOTSROOT		= ../..
 SCOTSINC		= -I$(SCOTSROOT)/src -I$(SCOTSROOT)/utils
 
 
-Eigen            = -I/opt/local -I/usr/include/eigen3
+Eigen            = -I/opt/local -I/usr/include/Eigen
+
 
 .PHONY: vehicle_5d
 
