@@ -22,8 +22,9 @@
 #include "TransitionFunction.hh"
 #include "Disturbance.hh"
 #include "InputOutput.hh"
+#include "TicToc.hh"
 
-#define CHUNK_SIZE 50
+#define CHUNK_SIZE 100
 
 /** @namespace scots **/ 
 namespace scots {
@@ -778,33 +779,33 @@ namespace scots {
                                         new_transition.m_no_post[q*M+j]=npost;
 
                                         /*enqueue more neighbours of q, if q is out of new disturbance region and its trajectory has a intersection with this region*/
-                                        if(out_of_region[q] && intersection_with_region){
-                                            conn++;
-                                            for (int i = 0; i < ncc; ++i)
-                                            {
-                                                abs_type neighbours=q;
-                                                for (std::size_t k = 0; k<state_dim; ++k)
-                                                {
-                                                    neighbours += cc_neighbours[i][k]*NN[k];
-                                                }
-                                                if(neighbours < N) {
-                                                    bool already_done = recomputed_mark[neighbours*M+j].test_and_set();
-                                                    if (!already_done){
-                                                        new_work_list_states[new_chunk] = neighbours;
-                                                        new_work_list_inputs[new_chunk] = j;
-                                                        new_chunk++;
-                                                        //about to overflow the new work list
-                                                        if (new_chunk == CHUNK_SIZE) {
-                                                            #pragma omp critical
-                                                            for (int i = 0; i < new_chunk; i++) {
-                                                                recompute_queue.emplace(new_work_list_states[i],new_work_list_inputs[i]);
-                                                            }
-                                                            new_chunk = 0;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }  
+                                        // if(out_of_region[q] && intersection_with_region){
+                                        //     conn++;
+                                        //     for (int i = 0; i < ncc; ++i)
+                                        //     {
+                                        //         abs_type neighbours=q;
+                                        //         for (std::size_t k = 0; k<state_dim; ++k)
+                                        //         {
+                                        //             neighbours += cc_neighbours[i][k]*NN[k];
+                                        //         }
+                                        //         if(neighbours < N) {
+                                        //             bool already_done = recomputed_mark[neighbours*M+j].test_and_set();
+                                        //             if (!already_done){
+                                        //                 new_work_list_states[new_chunk] = neighbours;
+                                        //                 new_work_list_inputs[new_chunk] = j;
+                                        //                 new_chunk++;
+                                        //                 //about to overflow the new work list
+                                        //                 if (new_chunk == CHUNK_SIZE) {
+                                        //                     #pragma omp critical
+                                        //                     for (int i = 0; i < new_chunk; i++) {
+                                        //                         recompute_queue.emplace(new_work_list_states[i],new_work_list_inputs[i]);
+                                        //                     }
+                                        //                     new_chunk = 0;
+                                        //                 }
+                                        //             }
+                                        //         }
+                                        //     }
+                                        // }  
                                     }
                                     chunk = 0;
                                   // put new stuff in the work queue
@@ -1294,7 +1295,8 @@ namespace scots {
                          */
                         /*initialize recompute_queue with the bigger box contains around states and (d_lb, d_ub)*/
                         abs_type nNRegion=1;
-
+                        TicToc time_;
+                        time_.tic();
                         for (std::size_t i = 0; i < state_dim; ++i)
                         {
                             tmp.push_back(num[0]);
@@ -1361,9 +1363,9 @@ namespace scots {
                                 out_of_region[q]=false;  
                                
                             }     
-                            
+                            time_.toc();
                         
-                       // std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
+                       std::cout<<"initial recomputing queue size:"<<recompute_queue.size()<<std::endl;
 
 
                         abs_type conn=0;
@@ -1393,6 +1395,7 @@ namespace scots {
                                 }
                                 
                                abs_type q=i;
+                               conn++;
                                 if(avoid(q)) {
                                     for(abs_type j=0; j<M; j++) {
                                         new_transition.out_of_domain[q*M+j]=true;
@@ -1442,7 +1445,7 @@ namespace scots {
                                 progress(q,counter);
                             } // end for
                         } // end parallel
-                        
+                        std::cout<<"size:"<<conn<<std::endl;
                         std::unique_ptr<bool[]> recomputed(new bool[N*M]());
                         for (abs_type i = 0; i < N*M; i++) {
                             recomputed[i] = recomputed_mark[i].test_and_set();

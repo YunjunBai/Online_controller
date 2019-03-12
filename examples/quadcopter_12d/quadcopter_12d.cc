@@ -79,7 +79,7 @@ int main() {
   //disturbance_type w_1={0,0,0,0,0,0,0,0,0,0,0};
    disturbance_type w_1={0.103, 0.1, 0.1,0.1,0.1,0.01,0.01,0.1,0.1,0.1,0.1,0};
   disturbance_type w_2={0.103, 0.1, 0.1,0.1,0.1,0.01,0.01,0.1,0.1,0.1,0.1,0};
-  disturbance_type w2_lb={-2.5,-2.5,-2.5,-30*M_PI/180,-30*M_PI/180,-30*M_PI/180,0,0,0,-0.05,-0.05,-0.05};
+  disturbance_type w2_lb={0.5,0.5,0.5,-30*M_PI/180,-30*M_PI/180,-30*M_PI/180,0,0,0,-0.05,-0.05,-0.05};
   disturbance_type w2_ub={1.5,1.5,1.5,10*M_PI/180,10*M_PI/180,10*M_PI/180,0.4,0.4,0.4,0.05,0.05,0.05};
  // disturbance_type w_1={.503,0.5,0.1,0.5,0.5,0.5,0.1,0.5,0.5,0.5,0.5,0.5};
   disturbance_type w_3={0.503, 0.5,0.1,0.5,0.5,0.5,0.1,0.5,0.5,0.5,0.5,0.5};
@@ -178,7 +178,7 @@ int main() {
     L[10][9]=0.1418;
     L[10][11]=0.1418;
 //*180/M_PI
-    yy[0] = y[6] ;
+    yy[0] = y[6];
     yy[1] = y[7];
     yy[2] = y[8];
     yy[3] =std::cos(y[5])/std::sin(y[4]) * y[10] +std::cos(y[5])/std::cos(y[4]) * y[11];
@@ -296,10 +296,13 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
   //   neigbour=true;
   // }
 };
+disturbance_type max_distance={2*tau,2*tau,2*tau,4*tau,4*tau,6*tau,2*tau,2*tau,2*tau,2*tau,2*tau,2*tau};
+disturbance_type max_w2_lb={1-2*tau,1-2*tau,1-2*tau,-30*M_PI/180,-30*M_PI/180,-30*M_PI/180,0,0,0,-0.05,-0.05,-0.05};
+disturbance_type max_w2_ub={1.5+2*tau,1.5+2*tau,1.5+2*tau,10*M_PI/180,10*M_PI/180,10*M_PI/180+6*tau,0.4+2*tau,0.4+2*tau,0.4+2*tau,0.05+2*tau,0.05+2*tau,0.05+2*tau};
 
  /* transition function of symbolic model */
   scots::TransitionFunction tf_o,  tf_old, tf_new, tf_standard,tf_new_com;
-//   std::queue<abs_type> online_queue; 
+   std::queue<abs_type> online_queue; 
 // std::cout << "Computing the transition function: " << std::endl;
 //   tt.tic();
 //   abs.compute_gb(tf_o, rs_post);
@@ -333,12 +336,12 @@ auto rs_repost = [&dis, &ge,w2_lb,w2_ub](ds_type &y, input_type &u, bool &neigbo
   // std::cout << "Number of transitions: " << tf_standard.get_no_transitions() << std::endl;
   // tt.toc();
 
-  // std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
-  // tt.tic();
-  // abs.recompute_gb_copy(tf_new,online_queue,tf_old, w2_lb, w2_ub, rs_post);
+  std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
+  tt.tic();
+  abs.recompute_gb(tf_new,online_queue,tf_old, w2_lb, w2_ub, rs_repost);
  
-  //  std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
-  // tt.toc();
+   std::cout << "Number of new transitions: " << tf_new.get_no_transitions() << std::endl;
+  tt.toc();
 
   //  std::cout << "Computing the new transition function locally (after distrubance changes): " << std::endl;
   // tt.tic();
