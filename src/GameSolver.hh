@@ -1,9 +1,6 @@
 /*
  * GameSolver.hh
- *
- *  created: Feb 2016
- *   author: Matthias Rungger
- * 
+
  */
 
 /** @file **/
@@ -96,12 +93,13 @@ WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
       K[i*M+j]=trans_function.m_no_post[i*M+j];
     }
   }
-
+  abs_type counter=0;
   /* main loop */
   while(!fifo.empty()) {
     /* get state to be processed */
     abs_type q=fifo.front();
     fifo.pop();
+    counter++;
     /* loop over each input */
     for(abs_type j=0; j<M; j++) {
       /* loop over pre's associated with this input */
@@ -126,7 +124,7 @@ WinningDomain solve_reachability_game(const TransitionFunction& trans_function,
       }  /* end loop over all pres of state i under input j */
     }  /* end loop over all input j */
   }  /* fifo is empty */
-
+std::cout<<"number:"<<counter<<std::endl;
   /* if the default value function was used, free the memory of the static object*/
   // if(value == scots::params::value){
   //     value.clear();

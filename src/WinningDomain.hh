@@ -1,8 +1,6 @@
 /*
  * WinningDomain.hh
  *
- *  created: Jan 2017
- *   author: Matthias Rungger
  *              
  */
 

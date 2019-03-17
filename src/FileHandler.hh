@@ -1,8 +1,6 @@
 /*
  * FileHandler.hh
  *
- *     created: Dec 2016
- *      author: Frederik Kunik
  */
 
 

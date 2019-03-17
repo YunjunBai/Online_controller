@@ -269,7 +269,7 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
   std::unique_ptr<double[]>  edge_val(new double[N*M]); //todo  i am not sure
 
   /* init fifo */
-  std::queue<abs_type> fifo=online_queue;
+  //std::queue<abs_type> fifo=online_queue;
 
   for(abs_type i=0; i<N; i++) {  
     for(abs_type j=0; j<M; j++) {
@@ -277,12 +277,13 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
       K[i*M+j]=trans_function.m_no_post[i*M+j];
     }
   }
-
+  abs_type counter=0;
   /* main loop */
-  while(!fifo.empty()) {
+  while(!online_queue.empty()) {
     /* get state to be processed */
-    abs_type q=fifo.front();
-    fifo.pop();
+    abs_type q=online_queue.front();
+    online_queue.pop();
+    counter++;
     /* loop over each input */
     for(abs_type j=0; j<M; j++) {
       /* loop over pre's associated with this input */
@@ -297,14 +298,14 @@ WinningDomain online_reachability_game(const TransitionFunction& trans_function,
         edge_val[i*M+j]=(edge_val[i*M+j]>=1+value[q] ? edge_val[i*M+j] : 1+value[q]);
         /* check if for node i and input j all posts are processed */
         if(!K[i*M+j] && value[i]>edge_val[i*M+j]) {
-          fifo.push(i);
+          online_queue.push(i);
           value[i]=edge_val[i*M+j]; 
           win_domain[i]=j;
         }
       }  /* end loop over all pres of state i under input j */
     }  /* end loop over all input j */
   }  /* fifo is empty */
-
+  std::cout<<"number"<<counter<<std::endl;
   /* if the default value function was used, free the memory of the static object*/
   /*if(value == scots::params::value){
       value.clear();

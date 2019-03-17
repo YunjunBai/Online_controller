@@ -1,8 +1,6 @@
 /*
  * scots.hh
- *
- *     created: Jan 2017
- *      author: Matthias Rungger
+
  */
 
 /** @file **/
@@ -15,7 +13,7 @@
 #include "GbEstimation.hh"
 #include "Disturbance.hh"
 //#include "Abstraction.hh"
-#include "Abstraction_old.hh"
+#include "Abstraction_parall.hh"
 #include "GameSolver.hh"
 #include "ProgressMeasureSolver.hh"
 #include "WinningDomain.hh"

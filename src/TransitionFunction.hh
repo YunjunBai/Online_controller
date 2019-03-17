@@ -1,8 +1,6 @@
 /*
  * TransitionFunction.hh
  *
- *  createdn: Jan 2017
- *    author: Matthias Rungger
  * 
  */
 

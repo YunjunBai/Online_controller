@@ -172,21 +172,7 @@ public:
             continue;
          x_disturbance[q]=new_disturbance;
     }
-    // /*trasfer all ids of subss to change the values in x_disturbance vector */
-    // while(!id_queue.empty()){
-    //   abs_type q=id_queue.front();
-    //   id_queue.pop();
-    //   x_disturbance[q]=new_disturbance;
-    // }
-    //  abs_type N = states_alphabet.size();
-    // for (abs_type i = 0; i < N; ++i)
-    // {
-    //   if (x_disturbance[i]!=new_disturbance)
-    //   {
-    //     std::cout<<"error"<<std::endl;
-    //   }
-    // }
-    
+  
   }
   disturbance_type get_initDisturbance(){
     return init_disturbance;
