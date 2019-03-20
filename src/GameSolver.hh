@@ -1,6 +1,5 @@
 /*
  * GameSolver.hh
-
  */
 
 /** @file **/
